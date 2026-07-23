@@ -1,13 +1,15 @@
 import streamlit as st
 import os
 import json
+import re
 import time
+import io
 from dotenv import load_dotenv
 
-# Load environment variables quietly from .env
+# Load environment variables quietly
 load_dotenv()
 
-# Page configuration
+# Streamlit Page Configuration
 st.set_page_config(
     page_title="AI Study Buddy | IBM SkillsBuild Capstone",
     page_icon="🎓",
@@ -15,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Professional CSS
+# High-End Modern Custom Styling (CSS)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
@@ -24,18 +26,16 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
     }
 
-    /* Hide Streamlit default header/footer elements for clean look */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Global background and styling */
     .stApp {
         background-color: #F8FAFC;
     }
     
     /* Main Hero Banner */
     .hero-banner {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #2563EB 100%);
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 45%, #2563EB 100%);
         padding: 2.8rem 2.5rem;
         border-radius: 20px;
         color: #FFFFFF;
@@ -77,16 +77,6 @@ st.markdown("""
         text-transform: uppercase;
     }
     
-    /* Feature Container Card */
-    .content-card {
-        background: #FFFFFF;
-        border-radius: 16px;
-        padding: 2rem;
-        border: 1px solid #E2E8F0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
-        margin-bottom: 1.5rem;
-    }
-    
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #FFFFFF;
@@ -109,8 +99,8 @@ st.markdown("""
         margin: 0;
     }
     
-    /* Score Banner */
-    .quiz-score-success {
+    /* Quiz Score Card */
+    .quiz-score-card {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%);
         color: white;
         padding: 1.8rem;
@@ -119,8 +109,18 @@ st.markdown("""
         margin-bottom: 1.8rem;
         box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
     }
+
+    .quiz-score-warning {
+        background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+        color: white;
+        padding: 1.8rem;
+        border-radius: 16px;
+        text-align: center;
+        margin-bottom: 1.8rem;
+        box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.2);
+    }
     
-    /* Streamlit Tab styling */
+    /* Streamlit Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: #F1F5F9;
@@ -144,30 +144,48 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
-    /* Button Customization */
+    /* Buttons */
     .stButton>button {
-        background-color: #2563EB;
-        color: #FFFFFF;
-        border: none;
         border-radius: 10px;
-        padding: 0.6rem 1.4rem;
         font-weight: 600;
-        font-size: 0.95rem;
         transition: all 0.2s ease;
     }
     
     .stButton>button:hover {
-        background-color: #1D4ED8;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Helper function to initialize Gemini API Client safely
+# Helper function: PDF Text Extractor
+def extract_text_from_file(uploaded_file):
+    """
+    Extracts plain text from uploaded files including PDF, TXT, MD, PY.
+    """
+    file_name = uploaded_file.name.lower()
+    if file_name.endswith('.pdf'):
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(uploaded_file)
+            extracted_text = ""
+            for page in reader.pages:
+                text = page.extract_text()
+                if text:
+                    extracted_text += text + "\n"
+            return extracted_text.strip()
+        except Exception as e:
+            return f"❌ Error parsing PDF file: {str(e)}"
+    else:
+        try:
+            return uploaded_file.read().decode("utf-8")
+        except Exception as e:
+            return f"❌ Error reading file: {str(e)}"
+
+# Helper function: Robust Gemini API Client
 def get_gemini_response(prompt, system_instruction=None, api_key=None, model_name="gemini-2.5-flash"):
     """
-    Executes request using Gemini API (via environment variable or secure config fallback).
+    Executes request using Gemini API with intelligent fallbacks.
     """
     effective_api_key = api_key or os.getenv("GEMINI_API_KEY", "")
     
@@ -203,6 +221,33 @@ def get_gemini_response(prompt, system_instruction=None, api_key=None, model_nam
     except Exception as e:
         return f"❌ **Processing Error**: {str(e)}"
 
+# Helper function: Robust JSON Quiz Extractor
+def extract_json_quiz(raw_text):
+    """
+    Extracts valid JSON array from raw model response using regex matching.
+    """
+    clean_text = raw_text.strip()
+    if clean_text.startswith("```json"):
+        clean_text = clean_text[7:]
+    if clean_text.startswith("```"):
+        clean_text = clean_text[3:]
+    if clean_text.endswith("```"):
+        clean_text = clean_text[:-3]
+    clean_text = clean_text.strip()
+    
+    # Try direct parse
+    try:
+        return json.loads(clean_text)
+    except Exception:
+        # Regex search for JSON array pattern [...]
+        match = re.search(r'\[\s*\{.*\}\s*\]', raw_text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except Exception:
+                pass
+        raise ValueError("Could not parse JSON array from AI output.")
+
 # --- CLEAN & PROFESSIONAL SIDEBAR ---
 with st.sidebar:
     st.markdown("""
@@ -218,16 +263,14 @@ with st.sidebar:
     st.markdown("##### ⚙️ Active Engine Configuration")
     st.success("🟢 AI Engine: **Google Gemini 2.5 Flash**")
     
-    # Model Selection
     model_choice = st.selectbox(
-        "AI Processing Mode",
+        "AI Model Mode",
         ["gemini-2.5-flash (Recommended)", "gemini-1.5-flash", "gemini-1.5-pro"],
         index=0
     )
 
     st.divider()
     
-    # Project Capstone Card
     st.markdown("### 📌 Project Metadata")
     st.markdown("""
     **Project Title:** AI-Powered Study Buddy  
@@ -239,7 +282,7 @@ with st.sidebar:
     
     st.divider()
 
-    # HIDDEN / ADVANCED DEVELOPER SETTINGS
+    # Collapsed Developer Settings
     with st.expander("🔐 Developer Settings", expanded=False):
         custom_key = st.text_input("Custom Gemini API Key Override", type="password", value=os.getenv("GEMINI_API_KEY", ""))
         st.caption("Leave empty to use default environment API configuration.")
@@ -247,19 +290,19 @@ with st.sidebar:
 # --- HERO BANNER ---
 st.markdown("""
 <div class="hero-banner">
-    <div class="badge-capstone">🎓 IBM SkillsBuild & Edunet Foundation Capstone</div>
+    <div class="badge-capstone">🎓 IBM SkillsBuild & Edunet Foundation Capstone Project</div>
     <h1>AI-Powered Virtual Study Companion</h1>
-    <p>Accelerate your learning journey with instant topic simplification, intelligent lecture note summarization, automated MCQ quizzes, and interactive focus tools.</p>
+    <p>Accelerate your learning journey with instant topic simplification, intelligent document summarization (PDF & Text), automated MCQ quizzes, and interactive focus tools.</p>
 </div>
 """, unsafe_allow_html=True)
 
 # --- APPLICATION TABS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "💡 Topic Explainer", 
-    "📝 Notes & Code Summarizer", 
-    "🧠 Interactive Quiz Generator", 
-    "⏱️ Study Planner & Focus Timer", 
-    "ℹ️ Project Documentation"
+    "📝 Notes & Document Summarizer", 
+    "🧠 Interactive MCQ Quiz Generator", 
+    "⏱️ Study Planner & Pomodoro Timer", 
+    "ℹ️ Architecture & Documentation"
 ])
 
 # ==========================================
@@ -272,8 +315,8 @@ with tab1:
     col1, col2 = st.columns([2, 1])
     with col1:
         topic_input = st.text_input(
-            "Enter Topic or Subject to Explore", 
-            placeholder="e.g. Backpropagation, Quantum Entanglement, Normalization in DBMS, TCP/IP Model"
+            "Enter Topic or Question to Explore", 
+            placeholder="e.g. Backpropagation in Neural Networks, Quantum Entanglement, Normalization in DBMS, TCP/IP Model"
         )
     with col2:
         explanation_level = st.selectbox(
@@ -302,36 +345,53 @@ with tab1:
                 
                 response_text = get_gemini_response(prompt, system_instruction=system_prompt, api_key=custom_key, model_name=model_choice)
                 
-                st.markdown("---")
-                st.markdown(response_text)
+                st.session_state["last_explanation"] = response_text
+                st.session_state["last_topic"] = topic_input
+
+    if "last_explanation" in st.session_state:
+        st.markdown("---")
+        st.markdown("#### 📖 Explanation Output")
+        st.markdown(st.session_state["last_explanation"])
+        
+        st.download_button(
+            label="📥 Download Explanation (.md)",
+            data=st.session_state["last_explanation"],
+            file_name=f"Explanation_{st.session_state.get('last_topic', 'Topic').replace(' ', '_')}.md",
+            mime="text/markdown"
+        )
 
 # ==========================================
-# TAB 2: NOTES & CODE SUMMARIZER
+# TAB 2: NOTES & DOCUMENT SUMMARIZER (WITH PDF SUPPORT)
 # ==========================================
 with tab2:
-    st.markdown("### 📝 Notes & Source Code Summarizer")
-    st.caption("Convert lengthy notes, textbook chapters, or programming code into high-retention structured summaries.")
+    st.markdown("### 📝 Notes & Document Summarizer")
+    st.caption("Convert raw text, lecture notes, textbooks (PDF), or source code into high-retention summaries.")
     
-    input_type = st.radio("Input Source:", ["Text / Code Snippet", "Upload File (.txt, .md, .py)"], horizontal=True)
+    input_type = st.radio("Input Source:", ["Text / Code Snippet", "Upload Document File (.pdf, .txt, .md, .py)"], horizontal=True)
     
     raw_content = ""
     if input_type == "Text / Code Snippet":
         raw_content = st.text_area(
-            "Paste your notes or code here:",
-            height=200,
-            placeholder="Paste raw lecture notes, chapter passages, or source code snippets..."
+            "Paste your notes or code snippet here:",
+            height=220,
+            placeholder="Paste raw lecture notes, textbook excerpts, or code blocks here..."
         )
     else:
-        uploaded_file = st.file_uploader("Choose a file to summarize", type=["txt", "md", "py", "json"])
+        uploaded_file = st.file_uploader("Upload Notes or PDF Document", type=["pdf", "txt", "md", "py", "json"])
         if uploaded_file is not None:
-            raw_content = uploaded_file.read().decode("utf-8")
-            st.success(f"File '{uploaded_file.name}' loaded successfully ({len(raw_content)} chars).")
+            with st.spinner("Extracting text from file..."):
+                raw_content = extract_text_from_file(uploaded_file)
+                if raw_content.startswith("❌"):
+                    st.error(raw_content)
+                    raw_content = ""
+                else:
+                    st.success(f"File '{uploaded_file.name}' loaded successfully! ({len(raw_content)} characters extracted)")
 
     col_s1, col_s2 = st.columns(2)
     with col_s1:
         summary_format = st.selectbox(
             "Summary Output Format",
-            ["Structured Bullet Points", "Executive Overview", "Flashcard Q&A Pairs", "Code Analysis & Debugging"]
+            ["Structured Bullet Points", "Executive Overview", "Flashcard Q&A Pairs", "Code Analysis & Debugging Tips"]
         )
     with col_s2:
         detail_level = st.select_slider(
@@ -339,33 +399,42 @@ with tab2:
             options=["Concise (Key Highlights)", "Standard Balanced Summary", "In-Depth Detailed Analysis"]
         )
         
-    if st.button("✨ Summarize Content", type="primary", use_container_width=True):
+    if st.button("✨ Summarize Document", type="primary", use_container_width=True):
         if not raw_content.strip():
-            st.warning("Please provide notes or content to summarize!")
+            st.warning("Please provide notes or upload a file to summarize!")
         else:
-            with st.spinner("Processing summary..."):
+            with st.spinner("Processing summary with AI..."):
                 prompt = f"""
-                Summarize the following text in '{summary_format}' style with detail level '{detail_level}'.
+                Summarize the following text in '{summary_format}' format with detail level '{detail_level}'.
                 
-                Source Content:
+                Content:
                 \"\"\"
-                {raw_content}
+                {raw_content[:15000]}
                 \"\"\"
                 """
                 system_prompt = "You are a professional academic research assistant specializing in notes summarization."
                 
                 summary_output = get_gemini_response(prompt, system_instruction=system_prompt, api_key=custom_key, model_name=model_choice)
-                
-                st.markdown("---")
-                st.markdown("#### 📋 Generated Summary Output")
-                st.markdown(summary_output)
+                st.session_state["last_summary"] = summary_output
+
+    if "last_summary" in st.session_state:
+        st.markdown("---")
+        st.markdown("#### 📋 Generated Summary Output")
+        st.markdown(st.session_state["last_summary"])
+        
+        st.download_button(
+            label="📥 Download Summary (.md)",
+            data=st.session_state["last_summary"],
+            file_name="Study_Notes_Summary.md",
+            mime="text/markdown"
+        )
 
 # ==========================================
 # TAB 3: INTERACTIVE QUIZ GENERATOR
 # ==========================================
 with tab3:
     st.markdown("### 🧠 Interactive MCQ Quiz Generator")
-    st.caption("Generate AI quizzes, test your understanding, and view real-time scores with detailed answer keys.")
+    st.caption("Generate AI quizzes, test your knowledge, and review real-time scorecards with collapsible explanations.")
     
     if "quiz_data" not in st.session_state:
         st.session_state.quiz_data = None
@@ -402,22 +471,14 @@ with tab3:
                 
                 raw_res = get_gemini_response(prompt, system_instruction=system_prompt, api_key=custom_key, model_name=model_choice)
                 
-                clean_json = raw_res.strip()
-                if clean_json.startswith("```json"):
-                    clean_json = clean_json[7:]
-                if clean_json.startswith("```"):
-                    clean_json = clean_json[3:]
-                if clean_json.endswith("```"):
-                    clean_json = clean_json[:-3]
-                clean_json = clean_json.strip()
-                
                 try:
-                    st.session_state.quiz_data = json.loads(clean_json)
+                    quiz_list = extract_json_quiz(raw_res)
+                    st.session_state.quiz_data = quiz_list
                     st.session_state.user_answers = {}
                     st.session_state.quiz_submitted = False
-                    st.success("Quiz successfully generated!")
+                    st.success(f"Quiz on '{quiz_subject}' generated successfully!")
                 except Exception as e:
-                    st.error("Quiz parsing error. Raw output generated:")
+                    st.error("Failed to parse quiz format. Raw AI response:")
                     st.code(raw_res)
 
     if st.session_state.quiz_data:
@@ -448,15 +509,20 @@ with tab3:
                 score += 1
                 
         pct = int((score / total) * 100)
+        card_class = "quiz-score-card" if pct >= 75 else "quiz-score-warning"
         
         st.markdown(f"""
-        <div class="quiz-score-success">
-            <h2 style="margin:0; font-size: 2rem;">Quiz Score: {score} / {total} ({pct}%)</h2>
-            <p style="margin-top: 0.4rem; font-size: 1.1rem; opacity: 0.9;">{'🌟 Great job! Mastered the concept.' if pct >= 75 else '👍 Good effort! Check the answer review below.'}</p>
+        <div class="{card_class}">
+            <h2 style="margin:0; font-size: 2rem;">Quiz Scorecard: {score} / {total} ({pct}%)</h2>
+            <p style="margin-top: 0.4rem; font-size: 1.1rem; opacity: 0.95;">
+                {'🎉 Outstanding! You have mastered this concept.' if pct >= 75 else '👍 Good effort! Review the explanations below to strengthen your understanding.'}
+            </p>
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("#### 🔍 Answer Key & Explanations:")
+        st.progress(pct / 100.0)
+        
+        st.markdown("#### 🔍 Answer Key & Detailed Explanations:")
         for idx, item in enumerate(st.session_state.quiz_data):
             u_ans = st.session_state.user_answers.get(idx)
             is_right = u_ans == item["answer"]
@@ -464,22 +530,25 @@ with tab3:
             exp_label = f"Question {idx+1}: {'✅ Correct' if is_right else '❌ Incorrect'}"
             with st.expander(exp_label, expanded=True):
                 st.markdown(f"**Question:** {item['question']}")
-                st.markdown(f"**Your Choice:** `{u_ans or 'Unanswered'}`")
+                st.markdown(f"**Your Answer:** `{u_ans or 'Not Answered'}`")
                 st.markdown(f"**Correct Option:** `{item['answer']}`")
                 st.info(f"**Explanation:** {item['explanation']}")
 
 # ==========================================
-# TAB 4: STUDY PLANNER & FOCUS TIMER
+# TAB 4: STUDY PLANNER & POMODORO TIMER
 # ==========================================
 with tab4:
-    st.markdown("### ⏱️ Pomodoro Focus Timer & Goal Tracker")
-    st.caption("Maximize study productivity with timed focus blocks and organized study checklists.")
+    st.markdown("### ⏱️ Pomodoro Focus Timer & Task Planner")
+    st.caption("Boost study retention with structured focus sessions and daily study goal checklists.")
     
     col_tm1, col_tm2 = st.columns(2)
     
     with col_tm1:
-        st.markdown("#### ⌛ Focus Session Timer")
-        session_mins = st.slider("Select Session Duration (Minutes)", min_value=5, max_value=60, value=25, step=5)
+        st.markdown("#### ⌛ Pomodoro Focus Session")
+        preset = st.radio("Select Timer Preset:", ["25 min (Focus)", "5 min (Short Break)", "15 min (Long Break)"], horizontal=True)
+        
+        preset_map = {"25 min (Focus)": 25, "5 min (Short Break)": 5, "15 min (Long Break)": 15}
+        session_mins = preset_map[preset]
         
         if "timer_active" not in st.session_state:
             st.session_state.timer_active = False
@@ -503,23 +572,29 @@ with tab4:
                 time.sleep(1)
             if st.session_state.timer_active:
                 st.balloons()
-                st.success("🎉 Focus session completed! Take a 5-minute break.")
+                st.success("🎉 Focus session completed! Take a well-deserved break.")
                 st.session_state.timer_active = False
         else:
             timer_box.markdown(f"### 🕒 Status: Ready (`{session_mins:02d}:00`)")
 
     with col_tm2:
-        st.markdown("#### 📌 Daily Study Goals")
-        new_goal = st.text_input("Add a goal task:", placeholder="e.g. Complete DBMS Module 2, Practice 5 MCQs")
+        st.markdown("#### 📌 Daily Study Goals Checklist")
+        new_goal = st.text_input("Add a study task:", placeholder="e.g. Solve 5 DBMS MCQs, Read Neural Network notes")
         if "goal_list" not in st.session_state:
             st.session_state.goal_list = [
-                {"text": "Review AI Study Buddy Presentation Slides", "done": True},
+                {"text": "Review AI Study Buddy Capstone Documentation", "done": True},
                 {"text": "Complete 25-minute Pomodoro focus block", "done": False}
             ]
             
-        if st.button("➕ Add Goal Task") and new_goal.strip():
-            st.session_state.goal_list.append({"text": new_goal.strip(), "done": False})
-            st.rerun()
+        col_g1, col_g2 = st.columns([3, 1])
+        with col_g1:
+            if st.button("➕ Add Task") and new_goal.strip():
+                st.session_state.goal_list.append({"text": new_goal.strip(), "done": False})
+                st.rerun()
+        with col_g2:
+            if st.button("🗑️ Clear Done"):
+                st.session_state.goal_list = [g for g in st.session_state.goal_list if not g["done"]]
+                st.rerun()
             
         st.markdown("---")
         for idx, item in enumerate(st.session_state.goal_list):
@@ -527,44 +602,61 @@ with tab4:
             st.session_state.goal_list[idx]["done"] = is_done
 
 # ==========================================
-# TAB 5: PROJECT DOCUMENTATION
+# TAB 5: ARCHITECTURE & DOCUMENTATION
 # ==========================================
 with tab5:
-    st.markdown("### ℹ️ IBM SkillsBuild & Edunet Foundation Capstone Submission")
+    st.markdown("### ℹ️ Architecture & Capstone Submission Details")
     
     st.markdown("""
-    #### 🎯 Problem Statement
-    Students encounter key obstacles during independent study:
-    - Academic concepts are often complex and difficult to grasp without instant guidance.
-    - Standard online search engines return lengthy, unstructured, or overwhelming results.
-    - Faculty and academic mentors are not available round-the-clock for instant doubt resolution.
-    - Lack of unified, interactive tools for instant summarization and self-assessment.
+    #### 🎯 Problem Statement & Key Challenges
+    Students face significant hurdles during self-study:
+    - Academic concepts can be complex and difficult to grasp without on-demand tutoring.
+    - Standard search engines yield lengthy, unstructured, or noisy results.
+    - Mentors and teachers are not available round-the-clock for instant doubt resolution.
+    - Lack of unified, interactive tools for instant note summarization and continuous self-assessment.
 
     ---
 
-    #### 💡 Proposed Solution
-    **AI Study Buddy Pro** is a responsive web application powered by **Google Gemini 2.5 Flash** and built on top of **Streamlit**.
-    It functions as a 24/7 personalized virtual tutor providing:
-    1. **Topic Simplification:** Translates complex theories into simple ELI5 analogies.
-    2. **Notes & Code Summarization:** Instantly distills lengthy notes, code, or logs into clean key points.
-    3. **Interactive MCQ Engine:** Generates real-time quizzes with score tracking and collapsible explanations.
-    4. **Productivity Suite:** Built-in Pomodoro focus timer and daily study planner.
+    #### 💡 Proposed Solution & Features
+    **AI Study Buddy Pro** is a responsive web application powered by **Google Gemini 2.5 Flash** and built with **Streamlit**.
+    - **Topic Simplification:** Translates complex theories into simple ELI5 analogies.
+    - **Notes & Document Summarization:** Reads raw text and uploaded PDF notes to output concise key takeaways.
+    - **Interactive MCQ Engine:** Generates real-time quizzes with dynamic score tracking and collapsible explanations.
+    - **Productivity Suite:** Built-in Pomodoro focus timer and goal tracker.
 
     ---
 
-    #### 🛠️ Tech Stack
-    - **UI Framework:** Streamlit
-    - **Generative AI Model:** Google Gemini 2.5 Flash / Gemini 1.5 Flash (`google-generativeai`)
-    - **Configuration Security:** `python-dotenv` for secure environment key loading
-    - **Local Host URL:** `http://localhost:8501/`
+    #### 🏗️ System Workflow Architecture
+    ```
+    ┌────────────────────────┐      ┌─────────────────────────┐      ┌────────────────────────┐
+    │  User Streamlit UI     │ ---> │  Python App Logic       │ ---> │  Google Gemini 2.5     │
+    │  (Topic / Notes / Quiz)│      │  (dotenv / PyPDF / JSON)│      │  Flash Generative API  │
+    └────────────────────────┘      └─────────────────────────┘      └────────────────────────┘
+                 │                                                            │
+                 ▼                                                            ▼
+    ┌────────────────────────┐                                   ┌────────────────────────┐
+    │ Scorecards / Downloads │ <-------------------------------- │ Structured Output      │
+    │ & Interactive Timers   │                                   │ (Markdown / JSON MCQs) │
+    └────────────────────────┘                                   └────────────────────────┘
+    ```
 
     ---
 
-    #### 👨‍🎓 Submission Metadata
-    - **Student Name:** Kunal Deshmukh
-    - **Department:** Information Technology (IT), USICT
+    #### 🛠️ Technology Stack
+    - **Language:** Python 3.10+
+    - **UI Framework:** Streamlit (`streamlit`)
+    - **Generative AI Engine:** Google Gemini 2.5 Flash (`google-generativeai`)
+    - **PDF Reader Engine:** `pypdf`
+    - **Security & Config:** `python-dotenv`
+
+    ---
+
+    #### 👨‍🎓 Project Credits & Submission Info
+    - **Developer:** Kunal Deshmukh
+    - **Institute:** USICT (Information Technology Dept)
     - **Track:** Artificial Intelligence
-    - **GitHub Repository:** [https://github.com/Kunal77744/AI-Study-Buddy](https://github.com/Kunal77744/AI-Study-Buddy)
+    - **Capstone Partner:** IBM SkillsBuild & Edunet Foundation
+    - **GitHub Repo:** [https://github.com/Kunal77744/AI-Study-Buddy](https://github.com/Kunal77744/AI-Study-Buddy)
     """)
 
 # Footer

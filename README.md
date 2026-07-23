@@ -12,36 +12,50 @@
 
 ## 📌 Project Overview
 
-**AI-Powered Study Buddy** solves the challenges students face during self-study hours. It acts as an interactive, 24/7 learning assistant powered by **Google Gemini 2.5 Flash** and built with a responsive **Streamlit** interface.
-
-### 🌟 Key Features
-
-1. **💡 Explain a Topic (ELI5 & Analogies):**
-   - Simplifies complex topics using relatable real-world analogies (Explain Like I'm 10).
-   - Generates step-by-step breakdowns, key takeaways, and reflection questions.
-
-2. **📝 Notes & Code Summarizer:**
-   - Summarizes long notes, textbook passages, or code snippets into clean bullet points.
-   - Accepts direct text input or file uploads (`.txt`, `.md`, `.py`).
-
-3. **🧠 Interactive MCQ Quiz Generator:**
-   - Dynamically generates multiple-choice quizzes for any subject and difficulty.
-   - Features real-time score tracking, session state management, and collapsible `st.expander` answer explanations.
-
-4. **⏱️ Study Planner & Pomodoro Timer:**
-   - 25-minute interactive study timer with task checklists to maintain focus.
-
-5. **ℹ️ Capstone Metadata & Project Info:**
-   - Complete problem statement, architecture, system approach, and references.
+**AI-Powered Study Buddy** is a personalized, interactive virtual tutor powered by **Google Gemini 2.5 Flash** and built using **Streamlit**. It addresses key challenges in self-study by delivering on-demand explanations, document summarization (including PDF support), automated MCQ quizzes, and productivity tools.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🌟 Key Features
 
-- **Frontend / Web UI:** Streamlit (`streamlit`)
-- **Generative AI API:** Google Gemini 2.5 Flash (`google-generativeai`)
-- **Environment Management:** `python-dotenv`
-- **Deployment Target:** Localhost (`http://localhost:8501`) / Streamlit Community Cloud
+1. **💡 Topic Explainer (ELI5 & Analogies):**
+   - Simplifies complex topics using relatable real-world analogies.
+   - Generates step-by-step breakdowns, key takeaways, and self-test reflection questions.
+   - Includes instant **Markdown (.md) Download** button.
+
+2. **📝 Notes & Document Summarizer (PDF Support):**
+   - Supports direct text input and document file uploads (`.pdf`, `.txt`, `.md`, `.py`).
+   - Extracts text automatically from PDF textbooks/notes using `pypdf`.
+   - Offers multiple output formats: Bullet points, Executive Overview, Flashcard Q&A, and Code Debugging.
+
+3. **🧠 Interactive MCQ Quiz Generator:**
+   - Dynamically generates multiple-choice quizzes with real-time score tracking.
+   - Uses regex-assisted JSON extraction to guarantee reliable parsing.
+   - Features collapsible `st.expander` answer keys and detailed explanations.
+
+4. **⏱️ Study Planner & Pomodoro Timer:**
+   - Includes presets for 25-min Focus Sessions, 5-min Short Breaks, and 15-min Long Breaks.
+   - Interactive daily study task goal checklist with task completion tracking.
+
+5. **ℹ️ Architecture & Documentation:**
+   - System workflow diagram, tech stack overview, and project submission metadata.
+
+---
+
+## 🏗️ System Workflow Architecture
+
+```
+┌────────────────────────┐      ┌─────────────────────────┐      ┌────────────────────────┐
+│  User Streamlit UI     │ ---> │  Python App Logic       │ ---> │  Google Gemini 2.5     │
+│  (Topic / Notes / Quiz)│      │  (dotenv / PyPDF / JSON)│      │  Flash Generative API  │
+└────────────────────────┘      └─────────────────────────┘      └────────────────────────┘
+             │                                                            │
+             ▼                                                            ▼
+┌────────────────────────┐                                   ┌────────────────────────┐
+│ Scorecards / Downloads │ <-------------------------------- │ Structured Output      │
+│ & Interactive Timers   │                                   │ (Markdown / JSON MCQs) │
+└────────────────────────┘                                   └────────────────────────┘
+```
 
 ---
 
@@ -59,7 +73,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure API Key
-Create a `.env` file in the project root directory or pass it directly in the Streamlit sidebar:
+Create a `.env` file in the project root directory or pass it directly in the Streamlit sidebar developer settings:
 ```env
 GEMINI_API_KEY=your_google_gemini_api_key_here
 ```
