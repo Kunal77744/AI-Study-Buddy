@@ -76,7 +76,6 @@ Open your browser and navigate to `http://localhost:8501`.
 
 - **Student Name:** Kunal Deshmukh
 - **Department:** Information Technology (IT), USICT
-- **AICTE ID:** `STU6885e9f37bd011753606643`
 - **Track:** Artificial Intelligence
 - **Capstone Program:** IBM SkillsBuild & Edunet Foundation
 - **GitHub Repository:** [https://github.com/Kunal77744/AI-Study-Buddy](https://github.com/Kunal77744/AI-Study-Buddy)

@@ -171,7 +171,6 @@ def get_gemini_response(prompt, system_instruction=None, api_key=None, model_nam
     """
     effective_api_key = api_key or os.getenv("GEMINI_API_KEY", "")
     
-    # Fallback default key if env is empty
     if not effective_api_key:
         return "⚠️ **Configuration Notice**: Gemini API Key is loading from system environment. If you encounter issues, please check your `.env` configuration file."
 
@@ -219,7 +218,7 @@ with st.sidebar:
     st.markdown("##### ⚙️ Active Engine Configuration")
     st.success("🟢 AI Engine: **Google Gemini 2.5 Flash**")
     
-    # Model Selection (Clean Dropdown)
+    # Model Selection
     model_choice = st.selectbox(
         "AI Processing Mode",
         ["gemini-2.5-flash (Recommended)", "gemini-1.5-flash", "gemini-1.5-pro"],
@@ -229,18 +228,18 @@ with st.sidebar:
     st.divider()
     
     # Project Capstone Card
-    st.markdown("### 📌 Submission Details")
+    st.markdown("### 📌 Project Metadata")
     st.markdown("""
     **Project Title:** AI-Powered Study Buddy  
     **Author:** Kunal Deshmukh  
     **Institute:** USICT (IT Department)  
-    **AICTE ID:** `STU6885e9f37bd011753606643`  
+    **Track:** Artificial Intelligence  
     **Capstone Partner:** IBM SkillsBuild & Edunet Foundation
     """)
     
     st.divider()
 
-    # HIDDEN / ADVANCED DEVELOPER SETTINGS (Collapsed by default so it never clutter UI)
+    # HIDDEN / ADVANCED DEVELOPER SETTINGS
     with st.expander("🔐 Developer Settings", expanded=False):
         custom_key = st.text_input("Custom Gemini API Key Override", type="password", value=os.getenv("GEMINI_API_KEY", ""))
         st.caption("Leave empty to use default environment API configuration.")
@@ -564,7 +563,6 @@ with tab5:
     #### 👨‍🎓 Submission Metadata
     - **Student Name:** Kunal Deshmukh
     - **Department:** Information Technology (IT), USICT
-    - **AICTE ID:** `STU6885e9f37bd011753606643`
     - **Track:** Artificial Intelligence
     - **GitHub Repository:** [https://github.com/Kunal77744/AI-Study-Buddy](https://github.com/Kunal77744/AI-Study-Buddy)
     """)
