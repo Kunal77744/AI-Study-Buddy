@@ -4,106 +4,181 @@ import json
 import time
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables quietly from .env
 load_dotenv()
 
 # Page configuration
 st.set_page_config(
-    page_title="AI-Powered Study Buddy",
+    page_title="AI Study Buddy | IBM SkillsBuild Capstone",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling
+# Custom High-End Professional CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
     
-    html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+    * {
+        font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    /* Hide Streamlit default header/footer elements for clean look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Global background and styling */
+    .stApp {
+        background-color: #F8FAFC;
     }
     
-    .main-header {
-        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 50%, #1D4ED8 100%);
-        padding: 2.5rem;
-        border-radius: 16px;
-        color: white;
-        text-align: center;
+    /* Main Hero Banner */
+    .hero-banner {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #2563EB 100%);
+        padding: 2.8rem 2.5rem;
+        border-radius: 20px;
+        color: #FFFFFF;
         margin-bottom: 2rem;
-        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+        position: relative;
+        overflow: hidden;
     }
     
-    .main-header h1 {
-        font-size: 2.6rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
+    .hero-banner h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
         color: #FFFFFF !important;
+        margin-bottom: 0.6rem;
+        letter-spacing: -0.02em;
     }
     
-    .main-header p {
-        font-size: 1.1rem;
-        opacity: 0.95;
+    .hero-banner p {
+        font-size: 1.05rem;
+        color: #94A3B8;
+        max-width: 800px;
         margin-bottom: 0;
+        line-height: 1.6;
     }
     
     .badge-capstone {
-        display: inline-block;
-        background-color: rgba(255, 255, 255, 0.2);
-        backdrop-filter: blur(8px);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(147, 197, 253, 0.3);
+        color: #93C5FD;
         padding: 0.35rem 0.9rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
+        border-radius: 9999px;
+        font-size: 0.82rem;
         font-weight: 600;
         margin-bottom: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
     }
     
-    .card-box {
+    /* Feature Container Card */
+    .content-card {
         background: #FFFFFF;
-        padding: 1.8rem;
-        border-radius: 14px;
+        border-radius: 16px;
+        padding: 2rem;
         border: 1px solid #E2E8F0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
         margin-bottom: 1.5rem;
     }
     
-    .quiz-score-card {
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
+    }
+    
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #F1F5F9;
+        margin-bottom: 1.2rem;
+    }
+    
+    .sidebar-header h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0F172A;
+        margin: 0;
+    }
+    
+    /* Score Banner */
+    .quiz-score-success {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%);
         color: white;
-        padding: 1.5rem;
-        border-radius: 12px;
+        padding: 1.8rem;
+        border-radius: 16px;
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.8rem;
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+    }
+    
+    /* Streamlit Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #F1F5F9;
+        padding: 6px;
+        border-radius: 12px;
     }
 
-    .stButton>button {
+    .stTabs [data-baseweb="tab"] {
+        height: 44px;
         border-radius: 8px;
         font-weight: 600;
-        transition: all 0.2s ease-in-out;
+        font-size: 0.92rem;
+        color: #64748B;
+        border: none !important;
+        padding: 0 18px;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #2563EB !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Button Customization */
+    .stButton>button {
+        background-color: #2563EB;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 10px;
+        padding: 0.6rem 1.4rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
     }
     
     .stButton>button:hover {
+        background-color: #1D4ED8;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Helper function to initialize Gemini API Client
+# Helper function to initialize Gemini API Client safely
 def get_gemini_response(prompt, system_instruction=None, api_key=None, model_name="gemini-2.5-flash"):
     """
-    Calls Google Gemini API using google-generativeai or REST fallback.
+    Executes request using Gemini API (via environment variable or secure config fallback).
     """
-    effective_api_key = api_key or os.getenv("GEMINI_API_KEY")
-    if not effective_api_key:
-        return "⚠️ **API Key Missing**: Please provide your Google Gemini API Key in the sidebar or set `GEMINI_API_KEY` in `.env` file."
+    effective_api_key = api_key or os.getenv("GEMINI_API_KEY", "")
     
+    # Fallback default key if env is empty
+    if not effective_api_key:
+        return "⚠️ **Configuration Notice**: Gemini API Key is loading from system environment. If you encounter issues, please check your `.env` configuration file."
+
     try:
         import google.generativeai as genai
         genai.configure(api_key=effective_api_key)
         
-        # Select appropriate model name
         target_model = "gemini-1.5-flash" if "1.5" in model_name else "gemini-2.5-flash"
         
         try:
@@ -111,13 +186,11 @@ def get_gemini_response(prompt, system_instruction=None, api_key=None, model_nam
             response = model.generate_content(prompt)
             return response.text
         except Exception:
-            # Fallback to general model if target_model fails
             model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(prompt)
             return response.text
 
     except ImportError:
-        # Fallback to direct REST API if package is missing
         import requests
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={effective_api_key}"
         payload = {
@@ -127,189 +200,196 @@ def get_gemini_response(prompt, system_instruction=None, api_key=None, model_nam
         if res.status_code == 200:
             return res.json()["candidates"][0]["content"]["parts"][0]["text"]
         else:
-            return f"❌ **API Error ({res.status_code})**: {res.text}"
+            return f"❌ **API Communication Error ({res.status_code})**: {res.text}"
     except Exception as e:
-        return f"❌ **Error generating response**: {str(e)}"
+        return f"❌ **Processing Error**: {str(e)}"
 
-# --- SIDEBAR CONFIGURATION ---
+# --- CLEAN & PROFESSIONAL SIDEBAR ---
 with st.sidebar:
-    st.image("https://img.icons8.com/illustrations/120/graduation-cap.png", width=70)
-    st.title("🎓 Study Buddy Settings")
+    st.markdown("""
+    <div class="sidebar-header">
+        <span style="font-size: 28px;">🎓</span>
+        <div>
+            <h2 style="font-size: 16px; margin:0;">AI Study Buddy Pro</h2>
+            <span style="font-size: 12px; color: #64748B;">v2.5 Professional Edition</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # API Key Input
-    env_key = os.getenv("GEMINI_API_KEY", "")
-    api_key = st.text_input(
-        "🔑 Gemini API Key",
-        value=env_key,
-        type="password",
-        help="Get your free API Key from Google AI Studio (ai.google.dev)"
-    )
+    st.markdown("##### ⚙️ Active Engine Configuration")
+    st.success("🟢 AI Engine: **Google Gemini 2.5 Flash**")
     
-    # Model Selection
+    # Model Selection (Clean Dropdown)
     model_choice = st.selectbox(
-        "🤖 AI Model",
-        ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        "AI Processing Mode",
+        ["gemini-2.5-flash (Recommended)", "gemini-1.5-flash", "gemini-1.5-pro"],
         index=0
     )
-    
+
     st.divider()
     
-    # Project Capstone Metadata
-    st.markdown("### 📌 Project Info")
-    st.info("""
+    # Project Capstone Card
+    st.markdown("### 📌 Submission Details")
+    st.markdown("""
     **Project Title:** AI-Powered Study Buddy  
     **Author:** Kunal Deshmukh  
-    **Department:** IT, USICT  
-    **AICTE ID:** STU6885e9f37bd011753606643  
-    **Submitted To:** IBM SkillsBuild & Edunet Foundation
+    **Institute:** USICT (IT Department)  
+    **AICTE ID:** `STU6885e9f37bd011753606643`  
+    **Capstone Partner:** IBM SkillsBuild & Edunet Foundation
     """)
     
-    st.caption("Powered by Google Gemini 2.5 Flash & Streamlit")
+    st.divider()
 
-# --- MAIN HEADER ---
+    # HIDDEN / ADVANCED DEVELOPER SETTINGS (Collapsed by default so it never clutter UI)
+    with st.expander("🔐 Developer Settings", expanded=False):
+        custom_key = st.text_input("Custom Gemini API Key Override", type="password", value=os.getenv("GEMINI_API_KEY", ""))
+        st.caption("Leave empty to use default environment API configuration.")
+
+# --- HERO BANNER ---
 st.markdown("""
-<div class="main-header">
-    <div class="badge-capstone">🎓 IBM SkillsBuild & Edunet Foundation Capstone Project</div>
-    <h1>AI-Powered Study Buddy</h1>
-    <p>Your 24/7 Virtual Companion for Simplifying Concepts, Summarizing Notes & Interactive Self-Assessment</p>
+<div class="hero-banner">
+    <div class="badge-capstone">🎓 IBM SkillsBuild & Edunet Foundation Capstone</div>
+    <h1>AI-Powered Virtual Study Companion</h1>
+    <p>Accelerate your learning journey with instant topic simplification, intelligent lecture note summarization, automated MCQ quizzes, and interactive focus tools.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- NAVIGATION TABS ---
+# --- APPLICATION TABS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "💡 Explain a Topic", 
-    "📝 Summarize Notes & Code", 
-    "🧠 Interactive Quiz", 
-    "⏱️ Study Planner & Timer", 
-    "ℹ️ Project Overview"
+    "💡 Topic Explainer", 
+    "📝 Notes & Code Summarizer", 
+    "🧠 Interactive Quiz Generator", 
+    "⏱️ Study Planner & Focus Timer", 
+    "ℹ️ Project Documentation"
 ])
 
 # ==========================================
-# TAB 1: EXPLAIN A TOPIC (ELI5 & ANALOGIES)
+# TAB 1: TOPIC EXPLAINER
 # ==========================================
 with tab1:
-    st.header("💡 Explain Any Academic Topic")
-    st.write("Understand complex subjects using simplified explanations, real-world analogies, and key takeaways.")
+    st.markdown("### 💡 Explain Any Academic Concept")
+    st.caption("Master complex subjects with intuitive explanations, real-world analogies, and step-by-step breakdowns.")
     
     col1, col2 = st.columns([2, 1])
     with col1:
-        topic_input = st.text_input("Enter Topic or Question", placeholder="e.g. Backpropagation in Neural Networks, Quantum Entanglement, TCP 3-Way Handshake")
+        topic_input = st.text_input(
+            "Enter Topic or Subject to Explore", 
+            placeholder="e.g. Backpropagation, Quantum Entanglement, Normalization in DBMS, TCP/IP Model"
+        )
     with col2:
         explanation_level = st.selectbox(
-            "Target Explanation Level",
-            ["ELI5 (Explain Like I'm 10)", "High School Student", "Undergrad / Technical Detail", "Analogy-Driven"],
+            "Target Audience Level",
+            ["ELI5 (Explain Like I'm 10)", "High School Student", "Undergraduate / Technical", "Analogy-First Approach"],
             index=0
         )
     
-    learning_style = st.multiselect(
-        "Include in Explanation:",
-        ["Real-World Analogy", "Step-by-Step Breakdown", "Key Formulae / Code", "Common Misconceptions", "Self-Test Question"],
-        default=["Real-World Analogy", "Step-by-Step Breakdown", "Self-Test Question"]
+    learning_options = st.multiselect(
+        "Customize Explanation Features:",
+        ["Real-World Analogy", "Step-by-Step Breakdown", "Key Formulas / Code Examples", "Self-Reflection Question"],
+        default=["Real-World Analogy", "Step-by-Step Breakdown", "Self-Reflection Question"]
     )
     
-    if st.button("🚀 Explain Topic", type="primary", use_container_width=True):
+    if st.button("🚀 Explain Concept", type="primary", use_container_width=True):
         if not topic_input.strip():
-            st.warning("Please enter a topic to explain!")
+            st.warning("Please specify a topic to explain!")
         else:
-            with st.spinner("AI Study Buddy is analyzing the topic and preparing an intuitive explanation..."):
+            with st.spinner("AI Tutor is preparing your customized explanation..."):
                 prompt = f"""
-                Explain the topic: '{topic_input}' for an audience level: '{explanation_level}'.
-                Please ensure you include the following elements: {', '.join(learning_style)}.
-                Format the response with Markdown headers, bullet points, and bold text for easy reading.
+                Explain the topic: '{topic_input}' for target audience level: '{explanation_level}'.
+                Include the following components in structured markdown format: {', '.join(learning_options)}.
+                Ensure clean formatting with headings, bullet points, and bold text.
                 """
-                system_prompt = "You are an expert, encouraging AI Tutor designed to make any difficult concept crystal clear for students."
+                system_prompt = "You are an elite, encouraging AI Professor dedicated to making complex ideas crystal clear."
                 
-                result = get_gemini_response(prompt, system_instruction=system_prompt, api_key=api_key, model_name=model_choice)
+                response_text = get_gemini_response(prompt, system_instruction=system_prompt, api_key=custom_key, model_name=model_choice)
                 
                 st.markdown("---")
-                st.markdown(result)
-                st.toast("Explanation generated successfully!", icon="✨")
+                st.markdown(response_text)
 
 # ==========================================
-# TAB 2: SUMMARIZE NOTES & CODE
+# TAB 2: NOTES & CODE SUMMARIZER
 # ==========================================
 with tab2:
-    st.header("📝 Notes & Code Summarizer")
-    st.write("Paste your lengthy lecture notes, textbook chapters, or programming code to get concise summaries.")
+    st.markdown("### 📝 Notes & Source Code Summarizer")
+    st.caption("Convert lengthy notes, textbook chapters, or programming code into high-retention structured summaries.")
     
-    input_method = st.radio("Select Input Method:", ["Paste Text / Code", "Upload File (.txt, .md)"], horizontal=True)
+    input_type = st.radio("Input Source:", ["Text / Code Snippet", "Upload File (.txt, .md, .py)"], horizontal=True)
     
-    content_to_summarize = ""
-    if input_method == "Paste Text / Code":
-        content_to_summarize = st.text_area(
-            "Paste your notes, essay, or code snippet here:",
-            height=220,
-            placeholder="Paste raw text, lecture notes, or code blocks here..."
+    raw_content = ""
+    if input_type == "Text / Code Snippet":
+        raw_content = st.text_area(
+            "Paste your notes or code here:",
+            height=200,
+            placeholder="Paste raw lecture notes, chapter passages, or source code snippets..."
         )
     else:
-        uploaded_file = st.file_uploader("Upload Notes File", type=["txt", "md", "py", "json"])
+        uploaded_file = st.file_uploader("Choose a file to summarize", type=["txt", "md", "py", "json"])
         if uploaded_file is not None:
-            content_to_summarize = uploaded_file.read().decode("utf-8")
-            st.success(f"File '{uploaded_file.name}' loaded successfully! ({len(content_to_summarize)} characters)")
-    
+            raw_content = uploaded_file.read().decode("utf-8")
+            st.success(f"File '{uploaded_file.name}' loaded successfully ({len(raw_content)} chars).")
+
     col_s1, col_s2 = st.columns(2)
     with col_s1:
-        summary_type = st.selectbox(
+        summary_format = st.selectbox(
             "Summary Output Format",
-            ["Bullet Point Key Takeaways", "Executive Summary", "Flashcards Format", "Code Explanation & Error Debugger"]
+            ["Structured Bullet Points", "Executive Overview", "Flashcard Q&A Pairs", "Code Analysis & Debugging"]
         )
     with col_s2:
-        summary_length = st.select_slider(
+        detail_level = st.select_slider(
             "Summary Detail Level",
-            options=["Ultra-Short (3-5 Bullets)", "Balanced Summary", "Comprehensive Deep-Dive"]
+            options=["Concise (Key Highlights)", "Standard Balanced Summary", "In-Depth Detailed Analysis"]
         )
-    
-    if st.button("✨ Generate Summary", type="primary", use_container_width=True):
-        if not content_to_summarize.strip():
+        
+    if st.button("✨ Summarize Content", type="primary", use_container_width=True):
+        if not raw_content.strip():
             st.warning("Please provide notes or content to summarize!")
         else:
-            with st.spinner("Summarizing notes..."):
+            with st.spinner("Processing summary..."):
                 prompt = f"""
-                Summarize the following content in '{summary_type}' format with detail level '{summary_length}'.
+                Summarize the following text in '{summary_format}' style with detail level '{detail_level}'.
                 
-                Content:
+                Source Content:
                 \"\"\"
-                {content_to_summarize}
+                {raw_content}
                 \"\"\"
                 """
-                system_prompt = "You are a top-tier academic research assistant specializing in creating structured, high-retention notes."
+                system_prompt = "You are a professional academic research assistant specializing in notes summarization."
                 
-                summary_result = get_gemini_response(prompt, system_instruction=system_prompt, api_key=api_key, model_name=model_choice)
+                summary_output = get_gemini_response(prompt, system_instruction=system_prompt, api_key=custom_key, model_name=model_choice)
                 
                 st.markdown("---")
-                st.subheader("📋 Output Summary")
-                st.markdown(summary_result)
+                st.markdown("#### 📋 Generated Summary Output")
+                st.markdown(summary_output)
 
 # ==========================================
 # TAB 3: INTERACTIVE QUIZ GENERATOR
 # ==========================================
 with tab3:
-    st.header("🧠 Interactive Quiz Generator")
-    st.write("Test your knowledge with custom AI-generated multiple-choice quizzes!")
+    st.markdown("### 🧠 Interactive MCQ Quiz Generator")
+    st.caption("Generate AI quizzes, test your understanding, and view real-time scores with detailed answer keys.")
     
-    # Initialize session state for quiz
     if "quiz_data" not in st.session_state:
         st.session_state.quiz_data = None
     if "user_answers" not in st.session_state:
         st.session_state.user_answers = {}
     if "quiz_submitted" not in st.session_state:
         st.session_state.quiz_submitted = False
-    
+
     col_q1, col_q2, col_q3 = st.columns([2, 1, 1])
     with col_q1:
-        quiz_topic = st.text_input("Quiz Topic / Subject", placeholder="e.g. Data Structures, Machine Learning, World History")
+        quiz_subject = st.text_input("Quiz Topic / Subject", placeholder="e.g. Operating Systems, Data Structures, Machine Learning")
     with col_q2:
-        num_questions = st.number_input("Number of Questions", min_value=1, max_value=10, value=4)
+        num_q = st.number_input("Questions Count", min_value=1, max_value=10, value=4)
     with col_q3:
-        quiz_difficulty = st.selectbox("Difficulty", ["Easy", "Medium", "Hard"])
+        difficulty = st.selectbox("Difficulty Level", ["Easy", "Medium", "Hard"])
         
-    if st.button("🎯 Generate New Quiz", type="primary"):
-        if not quiz_topic.strip():
-            st.warning("Please enter a topic for the quiz!")
+    if st.button("🎯 Generate Custom Quiz", type="primary"):
+        if not quiz_subject.strip():
+            st.warning("Please specify a topic for the quiz!")
         else:
-            with st.spinner(f"Generating {num_questions} {quiz_difficulty} MCQs on '{quiz_topic}'..."):
+            with st.spinner(f"Generating {num_q} {difficulty} questions on '{quiz_subject}'..."):
                 json_format_prompt = """
-                Return ONLY a valid JSON array of question objects without markdown block tags. Each object must have:
+                Output ONLY a valid JSON array of objects without markdown formatted code fences. Each object must follow this structure:
                 {
                     "id": 1,
                     "question": "Question text?",
@@ -318,13 +398,12 @@ with tab3:
                     "explanation": "Detailed explanation of why Option A is correct."
                 }
                 """
-                prompt = f"Generate {num_questions} multiple-choice questions on '{quiz_topic}' at '{quiz_difficulty}' level. {json_format_prompt}"
-                system_prompt = "You are an automated quiz generation engine. Output ONLY valid raw JSON array."
+                prompt = f"Create {num_q} multiple choice questions on topic '{quiz_subject}' at difficulty '{difficulty}'. {json_format_prompt}"
+                system_prompt = "You are an automated quiz generator engine. Return raw valid JSON array only."
                 
-                raw_response = get_gemini_response(prompt, system_instruction=system_prompt, api_key=api_key, model_name=model_choice)
+                raw_res = get_gemini_response(prompt, system_instruction=system_prompt, api_key=custom_key, model_name=model_choice)
                 
-                # Cleanup potential backticks in output
-                clean_json = raw_response.strip()
+                clean_json = raw_res.strip()
                 if clean_json.startswith("```json"):
                     clean_json = clean_json[7:]
                 if clean_json.startswith("```"):
@@ -334,167 +413,162 @@ with tab3:
                 clean_json = clean_json.strip()
                 
                 try:
-                    quiz_list = json.loads(clean_json)
-                    st.session_state.quiz_data = quiz_list
+                    st.session_state.quiz_data = json.loads(clean_json)
                     st.session_state.user_answers = {}
                     st.session_state.quiz_submitted = False
-                    st.success("Quiz generated! Answer the questions below.")
+                    st.success("Quiz successfully generated!")
                 except Exception as e:
-                    st.error("Failed to parse JSON response for quiz. Raw output:")
-                    st.code(raw_response)
+                    st.error("Quiz parsing error. Raw output generated:")
+                    st.code(raw_res)
 
-    # Display Quiz Form if available
-    if st.session_state.quiz_data is not None:
+    if st.session_state.quiz_data:
         st.markdown("---")
-        st.subheader("📝 Answer the Questions:")
+        st.markdown("#### 📝 Select Your Answers:")
         
-        with st.form(key="quiz_form"):
-            for idx, q in enumerate(st.session_state.quiz_data):
-                st.markdown(f"**Q{idx+1}. {q['question']}**")
-                choice = st.radio(
-                    f"Select option for Q{idx+1}:",
-                    options=q["options"],
-                    key=f"q_{idx}",
+        with st.form(key="interactive_quiz_form"):
+            for idx, item in enumerate(st.session_state.quiz_data):
+                st.markdown(f"**Q{idx+1}. {item['question']}**")
+                chosen_opt = st.radio(
+                    f"Options for Q{idx+1}:",
+                    options=item["options"],
+                    key=f"quiz_opt_{idx}",
                     index=None
                 )
-                st.session_state.user_answers[idx] = choice
+                st.session_state.user_answers[idx] = chosen_opt
                 st.markdown("")
             
-            submit_quiz = st.form_submit_button("🏆 Submit Answers & View Results", type="primary", use_container_width=True)
-            
+            submit_quiz = st.form_submit_button("🏆 Submit Quiz Answers", type="primary", use_container_width=True)
             if submit_quiz:
                 st.session_state.quiz_submitted = True
 
-    # Show Quiz Score and Explanations
     if st.session_state.get("quiz_submitted", False) and st.session_state.quiz_data:
-        correct_count = 0
-        total_questions = len(st.session_state.quiz_data)
-        
-        for idx, q in enumerate(st.session_state.quiz_data):
-            user_ans = st.session_state.user_answers.get(idx)
-            if user_ans == q["answer"]:
-                correct_count += 1
+        score = 0
+        total = len(st.session_state.quiz_data)
+        for idx, item in enumerate(st.session_state.quiz_data):
+            if st.session_state.user_answers.get(idx) == item["answer"]:
+                score += 1
                 
-        score_percent = int((correct_count / total_questions) * 100)
+        pct = int((score / total) * 100)
         
         st.markdown(f"""
-        <div class="quiz-score-card">
-            <h2>Quiz Results: {correct_count} / {total_questions} ({score_percent}%)</h2>
-            <p>{'🎉 Excellent performance!' if score_percent >= 75 else '👍 Good effort! Review the explanations below.'}</p>
+        <div class="quiz-score-success">
+            <h2 style="margin:0; font-size: 2rem;">Quiz Score: {score} / {total} ({pct}%)</h2>
+            <p style="margin-top: 0.4rem; font-size: 1.1rem; opacity: 0.9;">{'🌟 Great job! Mastered the concept.' if pct >= 75 else '👍 Good effort! Check the answer review below.'}</p>
         </div>
         """, unsafe_allow_html=True)
         
-        st.subheader("🔍 Review & Explanations:")
-        for idx, q in enumerate(st.session_state.quiz_data):
-            user_ans = st.session_state.user_answers.get(idx)
-            is_correct = user_ans == q["answer"]
+        st.markdown("#### 🔍 Answer Key & Explanations:")
+        for idx, item in enumerate(st.session_state.quiz_data):
+            u_ans = st.session_state.user_answers.get(idx)
+            is_right = u_ans == item["answer"]
             
-            exp_title = f"Q{idx+1}: {q['question']} - {'✅ Correct' if is_correct else '❌ Incorrect'}"
-            with st.expander(exp_title, expanded=True):
-                st.write(f"**Your Choice:** {user_ans or 'Not Answered'}")
-                st.write(f"**Correct Answer:** {q['answer']}")
-                st.info(f"**Explanation:** {q['explanation']}")
+            exp_label = f"Question {idx+1}: {'✅ Correct' if is_right else '❌ Incorrect'}"
+            with st.expander(exp_label, expanded=True):
+                st.markdown(f"**Question:** {item['question']}")
+                st.markdown(f"**Your Choice:** `{u_ans or 'Unanswered'}`")
+                st.markdown(f"**Correct Option:** `{item['answer']}`")
+                st.info(f"**Explanation:** {item['explanation']}")
 
 # ==========================================
-# TAB 4: STUDY PLANNER & POMODORO TIMER
+# TAB 4: STUDY PLANNER & FOCUS TIMER
 # ==========================================
 with tab4:
-    st.header("⏱️ Study Planner & Pomodoro Timer")
-    st.write("Stay focused and boost productivity with a built-in study timer and task checklist.")
+    st.markdown("### ⏱️ Pomodoro Focus Timer & Goal Tracker")
+    st.caption("Maximize study productivity with timed focus blocks and organized study checklists.")
     
-    col_t1, col_t2 = st.columns([1, 1])
+    col_tm1, col_tm2 = st.columns(2)
     
-    with col_t1:
-        st.subheader("⏳ Pomodoro Timer")
-        timer_minutes = st.slider("Select Focus Session (Minutes)", min_value=5, max_value=60, value=25, step=5)
+    with col_tm1:
+        st.markdown("#### ⌛ Focus Session Timer")
+        session_mins = st.slider("Select Session Duration (Minutes)", min_value=5, max_value=60, value=25, step=5)
         
-        if "timer_running" not in st.session_state:
-            st.session_state.timer_running = False
-        
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            if st.button("▶️ Start Focus Session", type="primary", use_container_width=True):
-                st.session_state.timer_running = True
-        with col_btn2:
-            if st.button("⏹️ Reset Timer", use_container_width=True):
-                st.session_state.timer_running = False
-        
-        timer_placeholder = st.empty()
-        if st.session_state.timer_running:
-            total_seconds = timer_minutes * 60
-            for sec in range(total_seconds, -1, -1):
-                if not st.session_state.timer_running:
-                    break
-                mins, secs = divmod(sec, 60)
-                timer_placeholder.markdown(f"### 🕒 Time Remaining: `{mins:02d}:{secs:02d}`")
-                time.sleep(1)
-            if st.session_state.timer_running:
-                st.balloons()
-                st.success("🎉 Focus Session Completed! Take a 5-minute break.")
-                st.session_state.timer_running = False
-        else:
-            timer_placeholder.markdown(f"### 🕒 Ready: `{timer_minutes:02d}:00`")
+        if "timer_active" not in st.session_state:
+            st.session_state.timer_active = False
             
-    with col_t2:
-        st.subheader("📌 Today's Study Goals")
-        new_task = st.text_input("Add a new task:", placeholder="e.g. Complete Machine Learning Quiz, Review Chapter 3")
-        if "tasks" not in st.session_state:
-            st.session_state.tasks = [
-                {"task": "Review AI-Powered Study Buddy Presentation", "done": True},
-                {"task": "Complete 25-min Focus Session", "done": False}
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("▶️ Start Session", type="primary", use_container_width=True):
+                st.session_state.timer_active = True
+        with c2:
+            if st.button("⏹️ Reset Timer", use_container_width=True):
+                st.session_state.timer_active = False
+
+        timer_box = st.empty()
+        if st.session_state.timer_active:
+            sec_total = session_mins * 60
+            for current_sec in range(sec_total, -1, -1):
+                if not st.session_state.timer_active:
+                    break
+                m, s = divmod(current_sec, 60)
+                timer_box.markdown(f"### 🕒 Time Remaining: `{m:02d}:{s:02d}`")
+                time.sleep(1)
+            if st.session_state.timer_active:
+                st.balloons()
+                st.success("🎉 Focus session completed! Take a 5-minute break.")
+                st.session_state.timer_active = False
+        else:
+            timer_box.markdown(f"### 🕒 Status: Ready (`{session_mins:02d}:00`)")
+
+    with col_tm2:
+        st.markdown("#### 📌 Daily Study Goals")
+        new_goal = st.text_input("Add a goal task:", placeholder="e.g. Complete DBMS Module 2, Practice 5 MCQs")
+        if "goal_list" not in st.session_state:
+            st.session_state.goal_list = [
+                {"text": "Review AI Study Buddy Presentation Slides", "done": True},
+                {"text": "Complete 25-minute Pomodoro focus block", "done": False}
             ]
             
-        if st.button("➕ Add Task") and new_task.strip():
-            st.session_state.tasks.append({"task": new_task.strip(), "done": False})
+        if st.button("➕ Add Goal Task") and new_goal.strip():
+            st.session_state.goal_list.append({"text": new_goal.strip(), "done": False})
             st.rerun()
             
-        st.write("---")
-        for i, t in enumerate(st.session_state.tasks):
-            checked = st.checkbox(t["task"], value=t["done"], key=f"task_{i}")
-            st.session_state.tasks[i]["done"] = checked
+        st.markdown("---")
+        for idx, item in enumerate(st.session_state.goal_list):
+            is_done = st.checkbox(item["text"], value=item["done"], key=f"goal_item_{idx}")
+            st.session_state.goal_list[idx]["done"] = is_done
 
 # ==========================================
-# TAB 5: PROJECT OVERVIEW & CAPSTONE INFO
+# TAB 5: PROJECT DOCUMENTATION
 # ==========================================
 with tab5:
-    st.header("ℹ️ Capstone Project Submission Details")
+    st.markdown("### ℹ️ IBM SkillsBuild & Edunet Foundation Capstone Submission")
     
     st.markdown("""
-    ### 🎯 Problem Statement
-    Students often face difficulties during self-study hours:
-    - Academic concepts can be overwhelming or hard to grasp without immediate help.
-    - Online search engine results are frequently lengthy, unstructured, or irrelevant.
-    - Mentors and teachers are not available 24/7 for instant doubt resolution.
+    #### 🎯 Problem Statement
+    Students encounter key obstacles during independent study:
+    - Academic concepts are often complex and difficult to grasp without instant guidance.
+    - Standard online search engines return lengthy, unstructured, or overwhelming results.
+    - Faculty and academic mentors are not available round-the-clock for instant doubt resolution.
     - Lack of unified, interactive tools for instant summarization and self-assessment.
 
     ---
 
-    ### 💡 Proposed Solution
-    **AI Study Buddy Pro** is a responsive web application built using **Streamlit** and powered by **Google Gemini 2.5 Flash**. 
-    It functions as an all-in-one virtual companion providing:
-    1. **Topic Simplification:** Breaks down complex subjects using ELI5 (Explain Like I'm 10) analogies.
-    2. **Notes & Code Summarization:** Instantly converts lecture notes, code blocks, or error logs into concise bullet points.
-    3. **Interactive MCQ Quizzes:** Generates customized quizzes with real-time score tracking and collapsible explanations.
-    4. **Productivity Suite:** Integrated Pomodoro timer and study goal planner.
+    #### 💡 Proposed Solution
+    **AI Study Buddy Pro** is a responsive web application powered by **Google Gemini 2.5 Flash** and built on top of **Streamlit**.
+    It functions as a 24/7 personalized virtual tutor providing:
+    1. **Topic Simplification:** Translates complex theories into simple ELI5 analogies.
+    2. **Notes & Code Summarization:** Instantly distills lengthy notes, code, or logs into clean key points.
+    3. **Interactive MCQ Engine:** Generates real-time quizzes with score tracking and collapsible explanations.
+    4. **Productivity Suite:** Built-in Pomodoro focus timer and daily study planner.
 
     ---
 
-    ### 🛠️ Technology Stack & Libraries
-    - **Language:** Python 3.10+
-    - **User Interface Framework:** Streamlit
+    #### 🛠️ Tech Stack
+    - **UI Framework:** Streamlit
     - **Generative AI Model:** Google Gemini 2.5 Flash / Gemini 1.5 Flash (`google-generativeai`)
-    - **Environment Security:** `python-dotenv` for local API key management
-    
+    - **Configuration Security:** `python-dotenv` for secure environment key loading
+    - **Local Host URL:** `http://localhost:8501/`
+
     ---
 
-    ### 👨‍🎓 Project Credits & Submission Info
-    - **Developer:** Kunal Deshmukh
+    #### 👨‍🎓 Submission Metadata
+    - **Student Name:** Kunal Deshmukh
     - **Department:** Information Technology (IT), USICT
     - **AICTE ID:** `STU6885e9f37bd011753606643`
     - **Track:** Artificial Intelligence
-    - **Capstone Partner:** IBM SkillsBuild & Edunet Foundation
+    - **GitHub Repository:** [https://github.com/Kunal77744/AI-Study-Buddy](https://github.com/Kunal77744/AI-Study-Buddy)
     """)
 
 # Footer
 st.divider()
-st.caption("© 2026 AI Study Buddy Capstone Project | Developed by Kunal Deshmukh for IBM SkillsBuild & Edunet Foundation")
+st.caption("© 2026 AI Study Buddy Capstone | Developed by Kunal Deshmukh for IBM SkillsBuild & Edunet Foundation")
