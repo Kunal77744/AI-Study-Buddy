@@ -4,7 +4,7 @@ import re
 
 import streamlit as st
 
-from services.gemini_service import generate_text
+from services.gemini_service import stream_text
 from utils.exceptions import (
     ConfigurationError,
     GeminiAPIError,
@@ -63,6 +63,7 @@ def render_topic_explainer() -> None:
         ],
     )
 
+    just_streamed = False
     if st.button("🚀 Explain Concept", type="primary", use_container_width=True):
         try:
             cleaned_topic = validate_non_empty_text(topic_input, "Topic")
@@ -77,13 +78,14 @@ def render_topic_explainer() -> None:
                 "You are an elite, encouraging AI Professor dedicated to making "
                 "complex ideas crystal clear."
             )
-            with st.spinner("Preparing your customized explanation..."):
-                response_text = generate_text(
-                    prompt,
-                    system_instruction=system_prompt,
-                )
+            st.markdown("---")
+            st.markdown("#### 📖 Explanation Output")
+            response_text = str(
+                st.write_stream(stream_text(prompt, system_instruction=system_prompt))
+            )
             st.session_state["last_explanation"] = response_text
             st.session_state["last_topic"] = cleaned_topic
+            just_streamed = True
         except ConfigurationError:
             st.error(
                 "AI Study Assistant is currently unavailable. "
@@ -102,9 +104,10 @@ def render_topic_explainer() -> None:
             st.error(f"Notice: {exc}")
 
     if "last_explanation" in st.session_state:
-        st.markdown("---")
-        st.markdown("#### 📖 Explanation Output")
-        st.markdown(st.session_state["last_explanation"])
+        if not just_streamed:
+            st.markdown("---")
+            st.markdown("#### 📖 Explanation Output")
+            st.markdown(st.session_state["last_explanation"])
         st.download_button(
             label="📥 Download Explanation (.md)",
             data=st.session_state["last_explanation"],

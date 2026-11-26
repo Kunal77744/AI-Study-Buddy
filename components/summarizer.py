@@ -5,7 +5,7 @@ import hashlib
 import streamlit as st
 
 from config.settings import ALLOWED_FILE_EXTENSIONS, MAX_FILE_SIZE_MB, MAX_PDF_PAGES
-from services.gemini_service import generate_text
+from services.gemini_service import stream_text
 from services.pdf_service import (
     DocumentExtractionResult,
     extract_text_from_bytes,
@@ -103,6 +103,7 @@ def render_summarizer() -> None:
             ],
         )
 
+    just_streamed = False
     if st.button("✨ Summarize Document", type="primary", use_container_width=True):
         try:
             validated_text = validate_non_empty_text(raw_content, "Notes or document content")
@@ -122,12 +123,13 @@ def render_summarizer() -> None:
                 "You are a professional academic research assistant specializing in "
                 "notes summarization."
             )
-            with st.spinner("Creating your study summary..."):
-                summary_output = generate_text(
-                    prompt,
-                    system_instruction=system_prompt,
-                )
+            st.markdown("---")
+            st.markdown("#### 📋 Generated Summary Output")
+            summary_output = str(
+                st.write_stream(stream_text(prompt, system_instruction=system_prompt))
+            )
             st.session_state["last_summary"] = summary_output
+            just_streamed = True
         except ConfigurationError:
             st.error(
                 "AI Study Assistant is currently unavailable. "
@@ -146,9 +148,10 @@ def render_summarizer() -> None:
             st.error(f"Notice: {exc}")
 
     if "last_summary" in st.session_state:
-        st.markdown("---")
-        st.markdown("#### 📋 Generated Summary Output")
-        st.markdown(st.session_state["last_summary"])
+        if not just_streamed:
+            st.markdown("---")
+            st.markdown("#### 📋 Generated Summary Output")
+            st.markdown(st.session_state["last_summary"])
         st.download_button(
             label="📥 Download Summary (.md)",
             data=st.session_state["last_summary"],

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from google.genai import errors as genai_errors
 
-from services.gemini_service import generate_text, resolve_model_id
+from services.gemini_service import generate_text, resolve_model_id, stream_text
 from utils.exceptions import (
     ConfigurationError,
     GeminiAPIError,
@@ -149,3 +149,27 @@ def test_generate_text_empty_response_raises(monkeypatch: pytest.MonkeyPatch) ->
 
     with pytest.raises(GeminiAPIError, match="empty response"):
         generate_text("Hi", api_key="key")
+
+
+def test_stream_text_yields_chunks(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_client = MagicMock()
+    mock_client.models.generate_content_stream.return_value = iter(
+        [SimpleNamespace(text="Hello "), SimpleNamespace(text="student!")]
+    )
+    monkeypatch.setattr(
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
+    )
+
+    chunks = list(stream_text("Explain stacks", api_key="key"))
+    assert chunks == ["Hello ", "student!"]
+
+
+def test_stream_text_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_client = MagicMock()
+    mock_client.models.generate_content_stream.return_value = iter([SimpleNamespace(text="")])
+    monkeypatch.setattr(
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
+    )
+
+    with pytest.raises(GeminiAPIError, match="empty response"):
+        list(stream_text("Explain stacks", api_key="key"))

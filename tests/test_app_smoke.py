@@ -36,7 +36,10 @@ def test_all_four_navigation_sections_render_cleanly() -> None:
 
 def test_topic_explainer_success_and_error_states() -> None:
     """Verify Topic Explainer renders AI output on success and friendly errors on failure."""
-    with patch("components.topic_explainer.generate_text", return_value="## Simple Binary Trees"):
+    with patch(
+        "components.topic_explainer.stream_text",
+        return_value=iter(["## Simple ", "Binary Trees"]),
+    ):
         at = AppTest.from_file("app.py", default_timeout=15)
         at.run()
 
@@ -51,7 +54,7 @@ def test_topic_explainer_success_and_error_states() -> None:
         assert at.session_state["last_explanation"] == "## Simple Binary Trees"
 
     with patch(
-        "components.topic_explainer.generate_text",
+        "components.topic_explainer.stream_text",
         side_effect=GeminiRateLimitError("429"),
     ):
         at = AppTest.from_file("app.py", default_timeout=15)
@@ -65,7 +68,7 @@ def test_topic_explainer_success_and_error_states() -> None:
         assert any("Too many requests" in e.value for e in at.error)
 
     with patch(
-        "components.topic_explainer.generate_text",
+        "components.topic_explainer.stream_text",
         side_effect=ConfigurationError("missing"),
     ):
         at = AppTest.from_file("app.py", default_timeout=15)
@@ -81,7 +84,7 @@ def test_topic_explainer_success_and_error_states() -> None:
 
 def test_summarizer_text_flow_and_auth_error() -> None:
     """Verify Summarizer handles pasted notes and friendly auth error states."""
-    with patch("components.summarizer.generate_text", return_value="- Key point 1"):
+    with patch("components.summarizer.stream_text", return_value=iter(["- Key point 1"])):
         at = AppTest.from_file("app.py", default_timeout=15)
         at.run()
         [b for b in at.button if b.label == "Open Summarizer"][0].click().run()
@@ -92,7 +95,7 @@ def test_summarizer_text_flow_and_auth_error() -> None:
         assert at.session_state["last_summary"] == "- Key point 1"
 
     with patch(
-        "components.summarizer.generate_text",
+        "components.summarizer.stream_text",
         side_effect=GeminiAuthError("invalid"),
     ):
         at = AppTest.from_file("app.py", default_timeout=15)
@@ -105,7 +108,7 @@ def test_summarizer_text_flow_and_auth_error() -> None:
 
 def test_roadmap_flow_and_error_state() -> None:
     """Verify Study Roadmap renders output on success and friendly errors on failure."""
-    with patch("components.roadmap_ui.generate_text", return_value="## Week 1: Basics"):
+    with patch("components.roadmap_ui.stream_text", return_value=iter(["## Week 1: Basics"])):
         at = AppTest.from_file("app.py", default_timeout=15)
         at.run()
         [b for b in at.button if b.label == "Open Roadmap"][0].click().run()
@@ -120,7 +123,7 @@ def test_roadmap_flow_and_error_state() -> None:
         assert at.session_state["last_roadmap"] == "## Week 1: Basics"
 
     with patch(
-        "components.roadmap_ui.generate_text",
+        "components.roadmap_ui.stream_text",
         side_effect=GeminiRateLimitError("429"),
     ):
         at = AppTest.from_file("app.py", default_timeout=15)

@@ -3,6 +3,7 @@
 import logging
 import re
 import time
+from collections.abc import Iterator
 from typing import Any
 
 from google import genai
@@ -199,3 +200,102 @@ def generate_text(
             ) from exc
 
     raise GeminiAPIError("Gemini API request failed.") from last_error
+
+
+def _map_api_error(
+    exc: genai_errors.APIError, model_id: str, attempt: int = 0, max_attempts: int = 1
+) -> GeminiAPIError:
+    """Log sanitized diagnostic details and return the appropriate GeminiAPIError."""
+    safe_msg = _sanitize_error_message(exc.message)
+    logger.error(
+        "Gemini APIError (model=%s, attempt=%d/%d, code=%s, status=%s): %s",
+        model_id,
+        attempt + 1,
+        max_attempts,
+        exc.code,
+        exc.status,
+        safe_msg,
+    )
+    if _is_auth_api_error(exc):
+        return GeminiAuthError(
+            "Gemini API authentication failed. Please verify your API key."
+        )
+    if exc.code == 429 or (exc.status or "").upper() == "RESOURCE_EXHAUSTED":
+        return GeminiRateLimitError(
+            "Gemini API quota or rate limit exceeded. Please wait and try again."
+        )
+    if exc.code == 404 or (exc.status or "").upper() == "NOT_FOUND":
+        return GeminiAPIError(
+            f"Selected model '{model_id}' is unavailable or not found for this API key."
+        )
+    return GeminiAPIError(
+        f"Gemini API request failed (status={exc.status or exc.code})."
+    )
+
+
+def stream_text(
+    prompt: str,
+    *,
+    system_instruction: str | None = None,
+    api_key: str | None = None,
+    model_choice: str | None = None,
+    timeout_seconds: int = API_TIMEOUT_SECONDS,
+) -> Iterator[str]:
+    """Stream text chunks from Google Gemini for low-latency UI rendering."""
+    cleaned_prompt = validate_non_empty_text(prompt, "Prompt")
+    effective_key = resolve_api_key(api_key)
+    if not effective_key:
+        logger.error("Gemini API stream aborted: GEMINI_API_KEY is not configured.")
+        raise ConfigurationError(
+            "Gemini API key is not configured. Add GEMINI_API_KEY to your .env file "
+            "or Streamlit Secrets."
+        )
+
+    model_id = resolve_model_id(model_choice)
+    client = genai.Client(
+        api_key=effective_key,
+        http_options=types.HttpOptions(timeout=timeout_seconds * 1000),
+    )
+    config = (
+        types.GenerateContentConfig(system_instruction=system_instruction)
+        if system_instruction
+        else None
+    )
+
+    yielded_any = False
+    try:
+        for chunk in client.models.generate_content_stream(
+            model=model_id,
+            contents=cleaned_prompt,
+            config=config,
+        ):
+            text = getattr(chunk, "text", None)
+            if isinstance(text, str) and text:
+                yielded_any = True
+                yield text
+    except genai_errors.APIError as exc:
+        raise _map_api_error(exc, model_id) from exc
+    except (TimeoutError, ConnectionError) as exc:
+        logger.warning(
+            "Gemini stream timeout/network error (model=%s): %s",
+            model_id,
+            type(exc).__name__,
+        )
+        raise GeminiAPIError(
+            "Gemini API stream timed out or lost connection."
+        ) from exc
+    except GeminiAPIError:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "Unexpected Gemini stream error (model=%s, type=%s)",
+            model_id,
+            type(exc).__name__,
+        )
+        raise GeminiAPIError(
+            f"Unexpected error communicating with Gemini ({type(exc).__name__})."
+        ) from exc
+
+    if not yielded_any:
+        logger.warning("Gemini stream completed with zero text chunks.")
+        raise GeminiAPIError("The AI model returned an empty response.")

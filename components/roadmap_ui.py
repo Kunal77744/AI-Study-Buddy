@@ -5,7 +5,7 @@ import re
 import streamlit as st
 
 from config.settings import ROADMAP_DURATIONS, ROADMAP_LEVELS
-from services.gemini_service import generate_text
+from services.gemini_service import stream_text
 from services.roadmap_service import build_roadmap_prompt
 from utils.exceptions import (
     ConfigurationError,
@@ -45,13 +45,18 @@ def render_roadmap_ui() -> None:
             st.slider("Daily Study Time (hours)", min_value=1, max_value=8, value=2)
         )
 
+    just_streamed = False
     if st.button("🗺️ Generate Study Roadmap", type="primary", use_container_width=True):
         try:
             prompt, sys_inst = build_roadmap_prompt(goal_input, duration, level, hours_per_day)
-            with st.spinner(f"Building your {duration} study roadmap..."):
-                roadmap_text = generate_text(prompt, system_instruction=sys_inst)
+            st.markdown("---")
+            st.markdown("#### 📋 Your Study Roadmap")
+            roadmap_text = str(
+                st.write_stream(stream_text(prompt, system_instruction=sys_inst))
+            )
             st.session_state["last_roadmap"] = roadmap_text
             st.session_state["last_roadmap_goal"] = goal_input.strip()
+            just_streamed = True
         except ConfigurationError:
             st.error(
                 "AI Study Assistant is currently unavailable. "
@@ -70,9 +75,10 @@ def render_roadmap_ui() -> None:
             st.error(f"Notice: {exc}")
 
     if "last_roadmap" in st.session_state:
-        st.markdown("---")
-        st.markdown("#### 📋 Your Study Roadmap")
-        st.markdown(st.session_state["last_roadmap"])
+        if not just_streamed:
+            st.markdown("---")
+            st.markdown("#### 📋 Your Study Roadmap")
+            st.markdown(st.session_state["last_roadmap"])
         st.download_button(
             label="📥 Download Roadmap (.md)",
             data=st.session_state["last_roadmap"],
