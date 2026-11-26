@@ -173,3 +173,43 @@ def test_stream_text_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(GeminiAPIError, match="empty response"):
         list(stream_text("Explain stacks", api_key="key"))
+
+
+def test_stream_text_retries_transient_error_before_first_chunk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mock_client = MagicMock()
+    mock_client.models.generate_content_stream.side_effect = [
+        _make_api_error(503, "UNAVAILABLE", "Temporary overload"),
+        iter([SimpleNamespace(text="Recovered stream")]),
+    ]
+    monkeypatch.setattr(
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
+    )
+    monkeypatch.setattr("services.gemini_service.time.sleep", MagicMock())
+
+    chunks = list(stream_text("Explain queues", api_key="key", max_retries=1))
+    assert chunks == ["Recovered stream"]
+    assert mock_client.models.generate_content_stream.call_count == 2
+
+
+def test_generate_text_passes_response_schema_when_provided(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = SimpleNamespace(text='[{"id": 1}]')
+    monkeypatch.setattr(
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
+    )
+
+    schema = {"type": "ARRAY"}
+    result = generate_text(
+        "Make quiz",
+        api_key="test-key",
+        response_mime_type="application/json",
+        response_schema=schema,
+    )
+    assert result == '[{"id": 1}]'
+    gen_config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert gen_config.response_mime_type == "application/json"
+    assert gen_config.response_schema == schema

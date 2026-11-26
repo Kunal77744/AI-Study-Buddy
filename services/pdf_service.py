@@ -128,3 +128,38 @@ def prepare_text_for_summary(
     if len(cleaned) <= max_chars:
         return cleaned, False
     return cleaned[:max_chars], True
+
+
+def chunk_text_for_summary(
+    text: str,
+    chunk_size: int = MAX_SUMMARY_INPUT_CHARS,
+    max_chunks: int = 3,
+) -> tuple[list[str], bool]:
+    """Split long text into bounded chunks at paragraph/line boundaries.
+
+    Returns (chunks, was_truncated_beyond_max_chunks).
+    """
+    cleaned = text.strip()
+    if not cleaned:
+        return [], False
+    if len(cleaned) <= chunk_size:
+        return [cleaned], False
+
+    chunks: list[str] = []
+    start = 0
+    total_len = len(cleaned)
+    while start < total_len and len(chunks) < max_chunks:
+        end = min(start + chunk_size, total_len)
+        if end < total_len:
+            split_at = cleaned.rfind("\n\n", start, end)
+            if split_at <= start:
+                split_at = cleaned.rfind("\n", start, end)
+            if split_at > start:
+                end = split_at
+        piece = cleaned[start:end].strip()
+        if piece:
+            chunks.append(piece)
+        start = end
+
+    was_truncated = start < total_len
+    return chunks, was_truncated

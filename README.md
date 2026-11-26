@@ -1,7 +1,7 @@
 # 🎓 AI-Powered Study Buddy
 
 > **IBM SkillsBuild & Edunet Foundation Capstone Project**  
-> *Modular Generative AI Study Companion built with Python, Streamlit, and Google Gemini*
+> *Modular Generative AI Study Companion built with Python, Streamlit, and Google Gemini (`google-genai`)*
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)
 ![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit)
@@ -14,10 +14,10 @@
 
 Students studying independently often face scattered search results, dense lecture PDFs, and a lack of immediate practice feedback. **AI-Powered Study Buddy** brings four focused study tools into one clean Streamlit workspace:
 
-1. **💡 Topic Explainer:** Explains concepts tailored to audience level (`ELI5`, `High School`, `Undergraduate / Technical`, `Analogy-First`) with `.md` export.
-2. **📝 Notes & Document Summarizer:** Summarizes pasted text/code or uploaded `.pdf`, `.txt`, `.md`, `.py`, and `.json` files in multiple formats with cached extraction.
-3. **🧠 Interactive MCQ Quiz Generator:** Generates 1–10 MCQs, validates the JSON schema, tracks answers in a form, and renders a scorecard with expandable explanations.
-4. **⏱️ Study Planner & Pomodoro Timer:** Non-blocking timestamp-based Pomodoro timer (25/5/15-min presets, Start/Pause/Resume/Reset) paired with an in-session daily study goals checklist.
+1. **💡 Topic Explainer:** Streams concept explanations tailored to audience level (`ELI5`, `High School Student`, `Undergraduate / Technical`, `Analogy-First Approach`) with `.md` export.
+2. **📝 Notes & Document Summarizer:** Summarizes pasted text/code or uploaded `.pdf`, `.txt`, `.md`, `.py`, and `.json` files in multiple formats with session-cached extraction, chunked multi-section summarization, and prompt-delimiter sanitization.
+3. **🧠 Interactive MCQ Quiz Generator:** Generates 1–10 MCQs using structured JSON output (`response_schema`), validates the schema, tracks answers in a form, and renders a scorecard with expandable explanations.
+4. **🗺️ Personalized Study Roadmap:** Streams week-by-week learning roadmaps tailored to target duration (`1–8 Weeks`), skill level, and daily study hours with `.md` export.
 
 ---
 
@@ -25,7 +25,7 @@ Students studying independently often face scattered search results, dense lectu
 
 - **Language:** Python 3.11+
 - **UI Framework:** Streamlit (`streamlit>=1.30.0`)
-- **AI SDK:** Google Gemini (`google-generativeai>=0.4.0`) supporting `gemini-2.5-flash`, `gemini-1.5-flash`, and `gemini-1.5-pro`
+- **AI SDK:** Official Google GenAI SDK (`google-genai>=1.0.0`)
 - **PDF Extraction:** `pypdf>=4.0.0`
 - **Configuration:** `python-dotenv>=1.0.0`
 - **Testing & Linting (dev):** `pytest`, `ruff`
@@ -36,24 +36,25 @@ Students studying independently often face scattered search results, dense lectu
 
 ```text
 AI-Study-Buddy/
-├── app.py                      # Streamlit entry point
+├── app.py                      # Streamlit entry point & layout styling
 ├── config/
-│   └── settings.py             # Centralized constants, model options, key resolution
+│   └── settings.py             # Centralized constants, model registry, key resolution
 ├── services/
-│   ├── gemini_service.py       # Gemini API client (explicit models, timeout, retries)
-│   ├── pdf_service.py          # File validation & PDF/text extraction
+│   ├── gemini_service.py       # Gemini API client (streaming, retries, structured output)
+│   ├── pdf_service.py          # File validation, PDF/text extraction & chunking
 │   ├── quiz_service.py         # Quiz prompting, JSON/schema validation, scoring
-│   └── timer_service.py        # Non-blocking Pomodoro state logic
+│   └── roadmap_service.py      # Study roadmap prompt builder & validation
 ├── components/
-│   ├── sidebar.py              # Model selector, metadata, Developer Settings
-│   ├── topic_explainer.py      # Tab 1 UI
-│   ├── summarizer.py           # Tab 2 UI
-│   ├── quiz_ui.py              # Tab 3 UI
-│   ├── study_planner.py        # Tab 4 UI
-│   └── architecture_tab.py     # Tab 5 UI
+│   ├── sidebar.py              # Navigation sidebar & assistant readiness indicator
+│   ├── topic_explainer.py      # Topic Explainer UI
+│   ├── summarizer.py           # Notes & Document Summarizer UI
+│   ├── quiz_ui.py              # Interactive MCQ Quiz UI
+│   └── roadmap_ui.py           # Personalized Study Roadmap UI
 ├── utils/
 │   ├── exceptions.py           # Custom StudyBuddyError hierarchy
+│   ├── ui_errors.py            # Shared Streamlit error rendering helper
 │   └── validators.py           # Input & upload validation
+├── docs/                       # Architecture, security, testing & audit documentation
 ├── tests/                      # Automated pytest suite (mocked Gemini API)
 ├── .streamlit/config.toml      # Theme & server configuration
 ├── .env.example                # Environment variable template
@@ -93,12 +94,12 @@ Open `http://localhost:8501` in your browser.
 
 ## 🧪 Testing
 
-Unit tests mock all external Gemini API calls so they run offline without consuming quota:
+Unit and `AppTest` smoke tests mock external Gemini API calls so they run offline without consuming quota:
 ```bash
 ruff check .
 pytest -v
 ```
-See [TESTING.md](TESTING.md) for the full test matrix and manual UI checklist.
+See [docs/TESTING.md](docs/TESTING.md) for the full test matrix and manual UI checklist.
 
 ---
 
@@ -106,16 +107,15 @@ See [TESTING.md](TESTING.md) for the full test matrix and manual UI checklist.
 
 - Never commit `.env` or API keys (`.gitignore` excludes `.env` and `.streamlit/secrets.toml`).
 - Uploaded files are validated for extension (`.pdf`, `.txt`, `.md`, `.py`, `.json`), size (max `10 MB`), and PDF page count (max `50` pages).
-- Prompts and document excerpts (up to `15,000` characters) are sent to Google's Gemini API for processing. Do not upload confidential or sensitive personal data.
-- See [SECURITY.md](SECURITY.md) for details.
+- Document content is wrapped in sanitized `<document_content>` delimiters and capped/chunked before sending to Google's Gemini API. Do not upload confidential or sensitive personal data.
+- See [docs/SECURITY.md](docs/SECURITY.md) for details.
 
 ---
 
 ## ⚠️ Known Limitations
 
 - **Scanned / Image-Only PDFs:** OCR is not implemented; PDFs without selectable text are rejected with an informative message.
-- **Session-Only Goals:** The Daily Study Goals checklist is stored in `st.session_state` and resets when the browser tab/session restarts.
-- **Gemini SDK Deprecation:** `google-generativeai` is currently used for compatibility; migrating to the newer `google-genai` SDK is a planned future upgrade.
+- **Session-Only State:** Generated explanations, summaries, quizzes, and roadmaps are stored in `st.session_state` and reset when the browser tab/session restarts.
 - **No Built-In License File:** Add a `LICENSE` file if distributing under a specific open-source license.
 
 ---

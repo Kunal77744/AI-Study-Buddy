@@ -10,18 +10,13 @@ from config.settings import (
 )
 from services.gemini_service import generate_text
 from services.quiz_service import (
+    QUIZ_RESPONSE_SCHEMA,
     QuizQuestion,
     build_quiz_prompt,
     evaluate_quiz,
     parse_and_validate_quiz,
 )
-from utils.exceptions import (
-    ConfigurationError,
-    GeminiAPIError,
-    GeminiRateLimitError,
-    QuizParseError,
-    StudyBuddyError,
-)
+from utils.ui_errors import render_study_buddy_error
 
 
 def render_quiz_ui() -> None:
@@ -43,6 +38,7 @@ def render_quiz_ui() -> None:
     with col_q1:
         quiz_subject = st.text_input(
             "Quiz Topic / Subject",
+            max_chars=200,
             placeholder="e.g. Operating Systems, Data Structures, Machine Learning",
         )
     with col_q2:
@@ -64,6 +60,8 @@ def render_quiz_ui() -> None:
                 raw_res = generate_text(
                     prompt,
                     system_instruction=sys_inst,
+                    response_mime_type="application/json",
+                    response_schema=QUIZ_RESPONSE_SCHEMA,
                 )
             quiz_list = parse_and_validate_quiz(raw_res)
             st.session_state.quiz_data = quiz_list
@@ -72,27 +70,14 @@ def render_quiz_ui() -> None:
             st.success(
                 f"Generated {len(quiz_list)} question(s) on '{quiz_subject.strip()}'."
             )
-        except ConfigurationError:
-            st.error(
-                "AI Study Assistant is currently unavailable. "
-                "Please try again later."
+        except Exception as exc:
+            render_study_buddy_error(
+                exc,
+                generic_api_message=(
+                    "Could not generate the quiz right now. "
+                    "Please wait a moment and try again."
+                ),
             )
-        except GeminiRateLimitError:
-            st.error(
-                "Too many requests right now. Please wait a moment and try again."
-            )
-        except GeminiAPIError:
-            st.error(
-                "Could not generate the quiz right now. "
-                "Please wait a moment and try again."
-            )
-        except QuizParseError:
-            st.error(
-                "The generated quiz could not be formatted properly. "
-                "Please try generating again."
-            )
-        except StudyBuddyError as exc:
-            st.error(f"Notice: {exc}")
 
     questions: list[QuizQuestion] | None = st.session_state.quiz_data
     gen_id: int = st.session_state.quiz_generation_id
@@ -125,6 +110,13 @@ def render_quiz_ui() -> None:
             idx: st.session_state.get(f"quiz_{gen_id}_opt_{idx}")
             for idx in range(len(questions))
         }
+        unanswered_count = sum(1 for ans in user_answers.values() if ans is None)
+        if unanswered_count > 0:
+            st.warning(
+                f"You left {unanswered_count} question(s) unanswered "
+                "(counted as incorrect)."
+            )
+
         evaluation = evaluate_quiz(questions, user_answers)
         card_class = "quiz-score-card" if evaluation.passed else "quiz-score-warning"
         feedback = (

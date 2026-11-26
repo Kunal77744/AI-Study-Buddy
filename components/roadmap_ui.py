@@ -7,12 +7,7 @@ import streamlit as st
 from config.settings import ROADMAP_DURATIONS, ROADMAP_LEVELS
 from services.gemini_service import stream_text
 from services.roadmap_service import build_roadmap_prompt
-from utils.exceptions import (
-    ConfigurationError,
-    GeminiAPIError,
-    GeminiRateLimitError,
-    StudyBuddyError,
-)
+from utils.ui_errors import render_study_buddy_error
 
 
 def _safe_filename(goal: str) -> str:
@@ -32,6 +27,7 @@ def render_roadmap_ui() -> None:
     with col1:
         goal_input = st.text_input(
             "What do you want to learn?",
+            max_chars=200,
             placeholder="e.g. Python for Data Science, System Design, DBMS, Web Development",
         )
     with col2:
@@ -57,31 +53,30 @@ def render_roadmap_ui() -> None:
             st.session_state["last_roadmap"] = roadmap_text
             st.session_state["last_roadmap_goal"] = goal_input.strip()
             just_streamed = True
-        except ConfigurationError:
-            st.error(
-                "AI Study Assistant is currently unavailable. "
-                "Please try again later."
+        except Exception as exc:
+            render_study_buddy_error(
+                exc,
+                generic_api_message=(
+                    "Could not generate your roadmap right now. "
+                    "Please wait a moment and try again."
+                ),
             )
-        except GeminiRateLimitError:
-            st.error(
-                "Too many requests right now. Please wait a moment and try again."
-            )
-        except GeminiAPIError:
-            st.error(
-                "Could not generate your roadmap right now. "
-                "Please wait a moment and try again."
-            )
-        except StudyBuddyError as exc:
-            st.error(f"Notice: {exc}")
 
     if "last_roadmap" in st.session_state:
         if not just_streamed:
             st.markdown("---")
             st.markdown("#### 📋 Your Study Roadmap")
             st.markdown(st.session_state["last_roadmap"])
-        st.download_button(
-            label="📥 Download Roadmap (.md)",
-            data=st.session_state["last_roadmap"],
-            file_name=_safe_filename(st.session_state.get("last_roadmap_goal", "Study")),
-            mime="text/markdown",
-        )
+        act_col1, act_col2 = st.columns([3, 1])
+        with act_col1:
+            st.download_button(
+                label="📥 Download Roadmap (.md)",
+                data=st.session_state["last_roadmap"],
+                file_name=_safe_filename(st.session_state.get("last_roadmap_goal", "Study")),
+                mime="text/markdown",
+            )
+        with act_col2:
+            if st.button("🗑️ Clear", key="clear_roadmap_btn", use_container_width=True):
+                st.session_state.pop("last_roadmap", None)
+                st.session_state.pop("last_roadmap_goal", None)
+                st.rerun()

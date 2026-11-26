@@ -7,6 +7,21 @@ from config.settings import QUIZ_DIFFICULTIES, QUIZ_PASS_THRESHOLD_PCT
 from utils.exceptions import QuizParseError, ValidationError
 from utils.validators import validate_non_empty_text, validate_question_count
 
+QUIZ_RESPONSE_SCHEMA: dict[str, object] = {
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "id": {"type": "INTEGER"},
+            "question": {"type": "STRING"},
+            "options": {"type": "ARRAY", "items": {"type": "STRING"}},
+            "answer": {"type": "STRING"},
+            "explanation": {"type": "STRING"},
+        },
+        "required": ["id", "question", "options", "answer", "explanation"],
+    },
+}
+
 
 @dataclass(frozen=True)
 class QuizQuestion:

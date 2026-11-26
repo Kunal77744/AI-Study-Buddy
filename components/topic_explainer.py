@@ -5,12 +5,7 @@ import re
 import streamlit as st
 
 from services.gemini_service import stream_text
-from utils.exceptions import (
-    ConfigurationError,
-    GeminiAPIError,
-    GeminiRateLimitError,
-    StudyBuddyError,
-)
+from utils.ui_errors import render_study_buddy_error
 from utils.validators import validate_non_empty_text
 
 
@@ -31,6 +26,7 @@ def render_topic_explainer() -> None:
     with col1:
         topic_input = st.text_input(
             "Enter Topic or Question to Explore",
+            max_chars=200,
             placeholder=(
                 "e.g. Backpropagation in Neural Networks, Quantum Entanglement, "
                 "Normalization in DBMS, TCP/IP Model"
@@ -86,31 +82,30 @@ def render_topic_explainer() -> None:
             st.session_state["last_explanation"] = response_text
             st.session_state["last_topic"] = cleaned_topic
             just_streamed = True
-        except ConfigurationError:
-            st.error(
-                "AI Study Assistant is currently unavailable. "
-                "Please try again later."
+        except Exception as exc:
+            render_study_buddy_error(
+                exc,
+                generic_api_message=(
+                    "Could not generate an explanation right now. "
+                    "Please wait a moment and try again."
+                ),
             )
-        except GeminiRateLimitError:
-            st.error(
-                "Too many requests right now. Please wait a moment and try again."
-            )
-        except GeminiAPIError:
-            st.error(
-                "Could not generate an explanation right now. "
-                "Please wait a moment and try again."
-            )
-        except StudyBuddyError as exc:
-            st.error(f"Notice: {exc}")
 
     if "last_explanation" in st.session_state:
         if not just_streamed:
             st.markdown("---")
             st.markdown("#### 📖 Explanation Output")
             st.markdown(st.session_state["last_explanation"])
-        st.download_button(
-            label="📥 Download Explanation (.md)",
-            data=st.session_state["last_explanation"],
-            file_name=_safe_filename(st.session_state.get("last_topic", "Topic")),
-            mime="text/markdown",
-        )
+        act_col1, act_col2 = st.columns([3, 1])
+        with act_col1:
+            st.download_button(
+                label="📥 Download Explanation (.md)",
+                data=st.session_state["last_explanation"],
+                file_name=_safe_filename(st.session_state.get("last_topic", "Topic")),
+                mime="text/markdown",
+            )
+        with act_col2:
+            if st.button("🗑️ Clear", key="clear_explanation_btn", use_container_width=True):
+                st.session_state.pop("last_explanation", None)
+                st.session_state.pop("last_topic", None)
+                st.rerun()
