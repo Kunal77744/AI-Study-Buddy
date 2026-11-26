@@ -1,10 +1,11 @@
-"""Unit tests for services.gemini_service (all API calls mocked)."""
+"""Unit tests for services.gemini_service using mocked google-genai Client."""
 
+import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from google.api_core import exceptions as google_exceptions
+from google.genai import errors as genai_errors
 
 from services.gemini_service import generate_text, resolve_model_id
 from utils.exceptions import (
@@ -14,6 +15,13 @@ from utils.exceptions import (
     GeminiRateLimitError,
     ValidationError,
 )
+
+
+def _make_api_error(code: int, status: str, message: str) -> genai_errors.APIError:
+    return genai_errors.APIError(
+        code,
+        {"error": {"code": code, "status": status, "message": message}},
+    )
 
 
 def test_resolve_model_id_preserves_exact_models() -> None:
@@ -39,13 +47,11 @@ def test_generate_text_empty_prompt_raises() -> None:
 
 
 def test_generate_text_success_and_explicit_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    mock_model = MagicMock()
-    mock_model.generate_content.return_value = SimpleNamespace(text="  Hello student!  ")
-    mock_cls = MagicMock(return_value=mock_model)
-    mock_configure = MagicMock()
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = SimpleNamespace(text="  Hello student!  ")
+    mock_client_cls = MagicMock(return_value=mock_client)
 
-    monkeypatch.setattr("services.gemini_service.genai.configure", mock_configure)
-    monkeypatch.setattr("services.gemini_service.genai.GenerativeModel", mock_cls)
+    monkeypatch.setattr("services.gemini_service.genai.Client", mock_client_cls)
 
     result = generate_text(
         "Explain DNS",
@@ -56,67 +62,77 @@ def test_generate_text_success_and_explicit_model(monkeypatch: pytest.MonkeyPatc
     )
 
     assert result == "Hello student!"
-    mock_configure.assert_called_once_with(api_key="test-key")
-    mock_cls.assert_called_once_with(
-        model_name="gemini-1.5-pro", system_instruction="Be concise"
-    )
-    mock_model.generate_content.assert_called_once_with(
-        "Explain DNS", request_options={"timeout": 15}
-    )
+    mock_client_cls.assert_called_once()
+    call_kwargs = mock_client_cls.call_args.kwargs
+    assert call_kwargs["api_key"] == "test-key"
+    assert call_kwargs["http_options"].timeout == 15_000
+
+    gen_kwargs = mock_client.models.generate_content.call_args.kwargs
+    assert gen_kwargs["model"] == "gemini-1.5-pro"
+    assert gen_kwargs["contents"] == "Explain DNS"
+    assert gen_kwargs["config"].system_instruction == "Be concise"
 
 
-def test_generate_text_auth_error_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> None:
-    mock_model = MagicMock()
-    mock_model.generate_content.side_effect = google_exceptions.Unauthenticated("bad key")
-    monkeypatch.setattr("services.gemini_service.genai.configure", MagicMock())
+def test_generate_text_auth_error_does_not_retry_and_redacts_logs(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = _make_api_error(
+        400, "INVALID_ARGUMENT", "API key not valid: AIzaSyDummySecretKey12345"
+    )
     monkeypatch.setattr(
-        "services.gemini_service.genai.GenerativeModel", MagicMock(return_value=mock_model)
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
     )
 
-    with pytest.raises(GeminiAuthError, match="authentication failed"):
-        generate_text("Hi", api_key="bad-key", max_retries=2)
-    assert mock_model.generate_content.call_count == 1
+    with caplog.at_level(logging.ERROR, logger="ai_study_buddy.gemini"):
+        with pytest.raises(GeminiAuthError, match="authentication failed"):
+            generate_text("Hi", api_key="AIzaSyDummySecretKey12345", max_retries=2)
+
+    assert mock_client.models.generate_content.call_count == 1
+    assert "AIzaSyDummySecretKey12345" not in caplog.text
+    assert "[REDACTED]" in caplog.text
 
 
 def test_generate_text_rate_limit_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    mock_model = MagicMock()
-    mock_model.generate_content.side_effect = google_exceptions.ResourceExhausted("quota")
-    monkeypatch.setattr("services.gemini_service.genai.configure", MagicMock())
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = _make_api_error(
+        429, "RESOURCE_EXHAUSTED", "Quota exceeded"
+    )
     monkeypatch.setattr(
-        "services.gemini_service.genai.GenerativeModel", MagicMock(return_value=mock_model)
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
     )
 
     with pytest.raises(GeminiRateLimitError, match="quota"):
         generate_text("Hi", api_key="key")
 
 
-def test_generate_text_retries_on_timeout_then_succeeds(
+def test_generate_text_retries_on_transient_server_error_then_succeeds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mock_model = MagicMock()
-    mock_model.generate_content.side_effect = [
-        google_exceptions.DeadlineExceeded("timeout"),
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = [
+        _make_api_error(503, "UNAVAILABLE", "Backend temporarily unavailable"),
         SimpleNamespace(text="Recovered response"),
     ]
-    monkeypatch.setattr("services.gemini_service.genai.configure", MagicMock())
     monkeypatch.setattr(
-        "services.gemini_service.genai.GenerativeModel", MagicMock(return_value=mock_model)
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
     )
     monkeypatch.setattr("services.gemini_service.time.sleep", MagicMock())
 
     result = generate_text("Hi", api_key="key", max_retries=1)
     assert result == "Recovered response"
-    assert mock_model.generate_content.call_count == 2
+    assert mock_client.models.generate_content.call_count == 2
 
 
 def test_generate_text_not_found_does_not_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    mock_model = MagicMock()
-    mock_model.generate_content.side_effect = google_exceptions.NotFound("missing model")
-    monkeypatch.setattr("services.gemini_service.genai.configure", MagicMock())
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = _make_api_error(
+        404, "NOT_FOUND", "Model not found"
+    )
     monkeypatch.setattr(
-        "services.gemini_service.genai.GenerativeModel", MagicMock(return_value=mock_model)
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
     )
 
     with pytest.raises(GeminiAPIError, match="unavailable or not found"):
