@@ -103,21 +103,35 @@ def test_summarizer_text_flow_and_auth_error() -> None:
         assert any("Could not generate a summary" in e.value for e in at.error)
 
 
-def test_study_planner_pomodoro_controls() -> None:
-    """Verify Study Planner Start, Pause, and Reset transitions in AppTest."""
-    at = AppTest.from_file("app.py", default_timeout=15)
-    at.run()
-    [b for b in at.button if b.label == "Open Planner"][0].click().run()
+def test_roadmap_flow_and_error_state() -> None:
+    """Verify Study Roadmap renders output on success and friendly errors on failure."""
+    with patch("components.roadmap_ui.generate_text", return_value="## Week 1: Basics"):
+        at = AppTest.from_file("app.py", default_timeout=15)
+        at.run()
+        [b for b in at.button if b.label == "Open Roadmap"][0].click().run()
+        assert at.session_state["active_section"] == NAV_ITEMS[3]
 
-    assert at.session_state["pomodoro_state"].status == "idle"
-    [b for b in at.button if "Start" in b.label][0].click().run()
-    assert at.session_state["pomodoro_state"].status == "running"
+        goal_input = [
+            ti for ti in at.text_input if "Data Science" in (ti.placeholder or "")
+        ][0]
+        goal_input.set_value("Python").run()
+        [b for b in at.button if "Generate Study Roadmap" in b.label][0].click().run()
+        assert not at.exception
+        assert at.session_state["last_roadmap"] == "## Week 1: Basics"
 
-    [b for b in at.button if "Pause" in b.label][0].click().run()
-    assert at.session_state["pomodoro_state"].status == "paused"
-
-    [b for b in at.button if "Reset" in b.label][0].click().run()
-    assert at.session_state["pomodoro_state"].status == "idle"
+    with patch(
+        "components.roadmap_ui.generate_text",
+        side_effect=GeminiRateLimitError("429"),
+    ):
+        at = AppTest.from_file("app.py", default_timeout=15)
+        at.run()
+        [b for b in at.button if b.label == "Open Roadmap"][0].click().run()
+        goal_input = [
+            ti for ti in at.text_input if "Data Science" in (ti.placeholder or "")
+        ][0]
+        goal_input.set_value("Python").run()
+        [b for b in at.button if "Generate Study Roadmap" in b.label][0].click().run()
+        assert any("Too many requests" in e.value for e in at.error)
 
 
 def test_consecutive_quizzes_do_not_carry_over_answers() -> None:

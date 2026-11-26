@@ -8,7 +8,7 @@ NAV_ITEMS: tuple[str, ...] = (
     "💡 Explainer",
     "📝 Summarizer",
     "🧠 Quiz",
-    "⏱️ Planner",
+    "🗺️ Roadmap",
 )
 
 

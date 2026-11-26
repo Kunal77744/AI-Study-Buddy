@@ -3,8 +3,8 @@
 import streamlit as st
 
 from components.quiz_ui import render_quiz_ui
+from components.roadmap_ui import render_roadmap_ui
 from components.sidebar import NAV_ITEMS, render_sidebar
-from components.study_planner import render_study_planner
 from components.summarizer import render_summarizer
 from components.topic_explainer import render_topic_explainer
 from config.settings import APP_ICON
@@ -208,11 +208,11 @@ FEATURE_CARDS = [
         "Open Quiz",
     ),
     (
-        "⏱️",
-        "Focus Planner",
-        "Organize study sessions using a Pomodoro timer.",
+        "🗺️",
+        "Study Roadmap",
+        "Generate week-by-week learning roadmaps for any subject.",
         NAV_ITEMS[3],
-        "Open Planner",
+        "Open Roadmap",
     ),
 ]
 
@@ -248,7 +248,7 @@ elif active_section == NAV_ITEMS[1]:
 elif active_section == NAV_ITEMS[2]:
     render_quiz_ui()
 elif active_section == NAV_ITEMS[3]:
-    render_study_planner()
+    render_roadmap_ui()
 
 st.divider()
 st.caption("AI Study Buddy | Your Learning Companion")

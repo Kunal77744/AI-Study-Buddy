@@ -41,13 +41,9 @@ DEFAULT_QUIZ_QUESTIONS = 4
 QUIZ_PASS_THRESHOLD_PCT = 75
 QUIZ_DIFFICULTIES: tuple[str, ...] = ("Easy", "Medium", "Hard")
 
-# Pomodoro timer presets (label -> minutes)
-TIMER_PRESETS: dict[str, int] = {
-    "25 min (Focus)": 25,
-    "5 min (Short Break)": 5,
-    "15 min (Long Break)": 15,
-}
-DEFAULT_TIMER_PRESET = "25 min (Focus)"
+# Study Roadmap options
+ROADMAP_DURATIONS: tuple[str, ...] = ("1 Week", "2 Weeks", "4 Weeks", "8 Weeks")
+ROADMAP_LEVELS: tuple[str, ...] = ("Beginner", "Intermediate", "Advanced")
 
 
 @dataclass(frozen=True)
