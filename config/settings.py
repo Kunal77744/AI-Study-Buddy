@@ -13,11 +13,12 @@ APP_VERSION = "2.5.1"
 
 # Explicit model registry: display label -> exact Gemini model ID
 MODEL_OPTIONS: dict[str, str] = {
-    "gemini-2.5-flash (Recommended)": "gemini-2.5-flash",
+    "gemini-3.8-flash (Recommended)": "gemini-3.8-flash",
+    "gemini-2.5-flash": "gemini-2.5-flash",
     "gemini-1.5-flash": "gemini-1.5-flash",
     "gemini-1.5-pro": "gemini-1.5-pro",
 }
-DEFAULT_MODEL_LABEL = "gemini-2.5-flash (Recommended)"
+DEFAULT_MODEL_LABEL = "gemini-3.8-flash (Recommended)"
 DEFAULT_MODEL_ID = MODEL_OPTIONS[DEFAULT_MODEL_LABEL]
 
 # Gemini API settings

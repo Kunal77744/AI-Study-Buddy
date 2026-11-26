@@ -25,7 +25,8 @@ def _make_api_error(code: int, status: str, message: str) -> genai_errors.APIErr
 
 
 def test_resolve_model_id_preserves_exact_models() -> None:
-    assert resolve_model_id("gemini-2.5-flash (Recommended)") == "gemini-2.5-flash"
+    assert resolve_model_id("gemini-3.8-flash (Recommended)") == "gemini-3.8-flash"
+    assert resolve_model_id("gemini-2.5-flash") == "gemini-2.5-flash"
     assert resolve_model_id("gemini-1.5-flash") == "gemini-1.5-flash"
     assert resolve_model_id("gemini-1.5-pro") == "gemini-1.5-pro"
 
