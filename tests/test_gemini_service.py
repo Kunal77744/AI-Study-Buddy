@@ -137,3 +137,14 @@ def test_generate_text_not_found_does_not_fallback(
 
     with pytest.raises(GeminiAPIError, match="unavailable or not found"):
         generate_text("Hi", api_key="key", model_choice="gemini-1.5-pro")
+
+
+def test_generate_text_empty_response_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = SimpleNamespace(text="   ")
+    monkeypatch.setattr(
+        "services.gemini_service.genai.Client", MagicMock(return_value=mock_client)
+    )
+
+    with pytest.raises(GeminiAPIError, match="empty response"):
+        generate_text("Hi", api_key="key")

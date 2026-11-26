@@ -26,6 +26,14 @@ from utils.exceptions import (
 from utils.validators import validate_non_empty_text
 
 logger = logging.getLogger("ai_study_buddy.gemini")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    )
+    logger.addHandler(_handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 _SECRET_PATTERN = re.compile(r"(AIza[0-9A-Za-z\-_]{10,}|key=[^&\s]+)")
 

@@ -18,6 +18,7 @@ from services.quiz_service import (
 from utils.exceptions import (
     ConfigurationError,
     GeminiAPIError,
+    GeminiRateLimitError,
     QuizParseError,
     StudyBuddyError,
 )
@@ -75,6 +76,10 @@ def render_quiz_ui() -> None:
             st.error(
                 "AI Study Assistant is currently unavailable. "
                 "Please try again later."
+            )
+        except GeminiRateLimitError:
+            st.error(
+                "Too many requests right now. Please wait a moment and try again."
             )
         except GeminiAPIError:
             st.error(

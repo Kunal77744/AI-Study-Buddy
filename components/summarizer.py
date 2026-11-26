@@ -11,7 +11,12 @@ from services.pdf_service import (
     extract_text_from_bytes,
     prepare_text_for_summary,
 )
-from utils.exceptions import ConfigurationError, GeminiAPIError, StudyBuddyError
+from utils.exceptions import (
+    ConfigurationError,
+    GeminiAPIError,
+    GeminiRateLimitError,
+    StudyBuddyError,
+)
 from utils.validators import validate_non_empty_text
 
 
@@ -127,6 +132,10 @@ def render_summarizer() -> None:
             st.error(
                 "AI Study Assistant is currently unavailable. "
                 "Please try again later."
+            )
+        except GeminiRateLimitError:
+            st.error(
+                "Too many requests right now. Please wait a moment and try again."
             )
         except GeminiAPIError:
             st.error(

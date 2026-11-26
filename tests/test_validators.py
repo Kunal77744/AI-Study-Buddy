@@ -30,6 +30,16 @@ def test_resolve_api_key_falls_back_to_st_secrets(monkeypatch: pytest.MonkeyPatc
     assert resolve_api_key("") == "secret-key-789"
 
 
+def test_resolve_api_key_falls_back_to_nested_st_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import streamlit as st
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr(st, "secrets", {"gemini": {"GEMINI_API_KEY": '"nested-key-999"'}})
+    assert resolve_api_key("") == "nested-key-999"
+
+
 def test_validate_non_empty_text_valid() -> None:
     assert validate_non_empty_text("  Binary Trees  ", "Topic") == "Binary Trees"
 

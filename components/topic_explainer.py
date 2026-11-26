@@ -5,7 +5,12 @@ import re
 import streamlit as st
 
 from services.gemini_service import generate_text
-from utils.exceptions import ConfigurationError, GeminiAPIError, StudyBuddyError
+from utils.exceptions import (
+    ConfigurationError,
+    GeminiAPIError,
+    GeminiRateLimitError,
+    StudyBuddyError,
+)
 from utils.validators import validate_non_empty_text
 
 
@@ -83,6 +88,10 @@ def render_topic_explainer() -> None:
             st.error(
                 "AI Study Assistant is currently unavailable. "
                 "Please try again later."
+            )
+        except GeminiRateLimitError:
+            st.error(
+                "Too many requests right now. Please wait a moment and try again."
             )
         except GeminiAPIError:
             st.error(

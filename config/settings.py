@@ -64,24 +64,37 @@ class AppMetadata:
 PROJECT_METADATA = AppMetadata()
 
 
+def _clean_secret(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.strip().strip('"').strip("'").strip()
+
+
 def resolve_api_key(override_key: str | None = None) -> str:
     """Resolve Gemini API key from BYOK override, env var, or Streamlit secrets.
 
     Never logs or returns masked versions; returns stripped key or empty string.
     """
-    if override_key and override_key.strip():
-        return override_key.strip()
+    cleaned_override = _clean_secret(override_key)
+    if cleaned_override:
+        return cleaned_override
 
-    env_key = os.getenv("GEMINI_API_KEY", "").strip()
+    env_key = _clean_secret(os.getenv("GEMINI_API_KEY", ""))
     if env_key:
         return env_key
 
     try:
         import streamlit as st
 
-        secret_key = str(st.secrets.get("GEMINI_API_KEY", "")).strip()
-        if secret_key:
-            return secret_key
+        top_level = _clean_secret(st.secrets.get("GEMINI_API_KEY", ""))
+        if top_level:
+            return top_level
+
+        for section in st.secrets.values():
+            if hasattr(section, "get"):
+                nested = _clean_secret(section.get("GEMINI_API_KEY", ""))
+                if nested:
+                    return nested
     except Exception:
         pass
 
